@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 app = Flask(__name__)
 
 # Replace with the actual Optimism RPC URL
-optimism_rpc_url = 'https://linea-mainnet.infura.io/v3/e2b4d9fa19c748489fb6c0d6bf411be4'
+optimism_rpc_url = 'https://rpc.ankr.com/horizen_eon'
 
 # Create a Web3 instance to connect to the Optimism blockchain
 web3 = Web3(Web3.HTTPProvider(optimism_rpc_url))
