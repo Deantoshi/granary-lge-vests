@@ -69,9 +69,39 @@ def get_last_block_tracked():
     
     last_block_monitored = df['last_block_number'].max()
 
+    last_block_monitored = int(last_block_monitored)
+
     return last_block_monitored
 
 print(get_last_block_tracked())
+
+#makes a dataframe and stores it in a csv file
+def make_user_data_csv(df):
+    old_df = pd.read_csv('all_users.csv')
+    old_df = old_df.drop_duplicates(subset=['wallet_address','tx_hash','number_of_tokens','block_number'], keep='last')
+
+    combined_df_list = [df, old_df]
+
+    combined_df = pd.concat(combined_df_list)
+    combined_df = combined_df.drop_duplicates(subset=['wallet_address','tx_hash','number_of_tokens','block_number'], keep='last')
+
+    # combined_df['txHash'] = combined_df['txHash'].str.lower()
+    # combined_df['tokenAddress'] = combined_df['tokenAddress'].str.lower()
+
+    # print(df)
+    # print(len(old_df), len(df), len(combined_df))
+
+    if len(combined_df) >= len(old_df):
+        combined_df['last_block_number'] = int(df['last_block_number'].max())
+        combined_df.to_csv('all_users.csv', index=False)
+        print('CSV Made')
+
+    elif len(combined_df) > 0:
+        combined_df['last_block_number'] = int(df['last_block_number'].max())
+        combined_df.to_csv('all_users.csv', index=False)
+        print('CSV Made')
+    
+    return
 
 # Gets transactions of all blocks within a specified range and returns a df with info from blocks that include our contract
 def get_all_gateway_transactions():
@@ -79,6 +109,9 @@ def get_all_gateway_transactions():
     weth_gateway_address = "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE"
 
     from_block = get_last_block_tracked()
+
+    print('Last Block Number: ', from_block)
+    # from_block = 940460
 
     tx_hash_list = []
     value_list = []
@@ -105,18 +138,26 @@ def get_all_gateway_transactions():
                 value_list.append(transaction['value'])
                 block_number_list.append(transaction['blockNumber'])
         
-        last_block_number = block_number
+        last_block_number = int(block_number)
                 # print('found')
 
+    print('Last Block Number: ', last_block_number)
 
-    df = pd.DataFrame()
-    df['wallet_address'] = user_address_list
-    df['tx_hash'] = tx_hash_list
-    df['number_of_tokens'] = value_list
-    df['block_number'] = block_number_list
-    df['last_block_number'] = last_block_number
 
-    df.to_csv('all_users.csv', index=False)
+    # handles blank dataframes
+    if len(user_address_list) < 1:
+        df = pd.read_csv('all_users.csv')
+        df['last_block_number'] = last_block_number
+
+    else:
+        df = pd.DataFrame()
+        df['wallet_address'] = user_address_list
+        df['tx_hash'] = tx_hash_list
+        df['number_of_tokens'] = value_list
+        df['block_number'] = block_number_list
+        df['last_block_number'] = last_block_number
+
+    make_user_data_csv(df)
 
 get_all_gateway_transactions()
 
@@ -622,25 +663,6 @@ def search_and_respond_2(address, queue):
     #new_df = get_all_user_transactions(address)
 
     #make_user_data_csv(new_df)
-
-#makes a dataframe and stores it in a csv file
-def make_user_data_csv(df):
-    old_df = pd.read_csv('all_events.csv')
-    old_df = old_df.drop_duplicates(subset=['wallet_address', 'txHash', 'lendBorrowType'], keep='last')
-
-    combined_df_list = [df, old_df]
-    combined_df = pd.concat(combined_df_list)
-    combined_df = combined_df.drop_duplicates(subset=['wallet_address', 'txHash', 'lendBorrowType'], keep='last')
-
-    combined_df['txHash'] = combined_df['txHash'].str.lower()
-    combined_df['tokenAddress'] = combined_df['tokenAddress'].str.lower()
-
-    # print(df)
-    # print(len(old_df), len(df), len(combined_df))
-    if len(combined_df) >= len(old_df):
-        combined_df.to_csv('all_events.csv', index=False)
-        print('CSV Made')
-    return
 
 #gets rid of weth_gateway_collateralizes
 # adds a collateral row for each lend row for users who have borrowed something
