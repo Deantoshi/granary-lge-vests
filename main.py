@@ -37,52 +37,56 @@ FROM_BLOCK = 951714
 
 
 # returns basic data about our reserves in a dataframe
-def get_reserve_data(reserve_address):
-    reserve_address = reserve_address.lower()
+def get_reserve_data():
+    
+    reserve_address_list = ['0xeb329420fae03176ec5877c34e2c38580d85e069', '0xbe8afe7e442ffffe576b979d490c5adb7823c3c6', '0x1d6492faacb1ea15641dd94fb9ab020056abbc94', '0xa0cd598ef64856502ae294aa58bfed90922fb3c7', 
+                    '0x6c29836be0dcd891c1c4ca77ff8f3a29e4a3fa5e', '0x770d3ed41f9f57ebb0463bd435df7fcc6f1e40ce', '0x3f8f2929a2a461d4b59575f132016348cf526f25', '0xbc25f58ba700452d66d1e025de6abfd23a659265']
+
+    reserve_decimal_list = [1e18, 1e18, 1e6, 1e6, 1e8, 1e8, 1e18, 1e18]
+
+    reserve_name_list = ['a_zen', 'v_zen', 'v_usdc', 'a_usdc', 'v_wbtc', 'a_wbtc', 'v_weth', 'a_weth']
+
+    df = pd.DataFrame()
+
+    df['reserve_name'] = reserve_name_list
+    df['reserve_address'] = reserve_address_list
+    df['reserve_decimal'] = reserve_decimal_list
+
+    return df
+    # reserve_list = [x.lower() for x in reserve_list]
 
     decimals = 0
 
-    if reserve_address == '0xEB329420Fae03176EC5877c34E2c38580D85E069'.lower(): # yuzuZen
-        decimals = 1e18
+    # if reserve_address == '0xEB329420Fae03176EC5877c34E2c38580D85E069'.lower(): # yuzuZen
+    #     decimals = 1e18
     
-    if reserve_address == '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'.lower(): # v_debt_yuzu
-        decimals = 1e18
+    # if reserve_address == '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'.lower(): # v_debt_yuzu
+    #     decimals = 1e18
 
-    elif reserve_address == '0x1d6492FaAcB1ea15641dD94FB9AB020056aBBC94'.lower(): # v_debt_usdc
-        decimals = 1e6
+    # elif reserve_address == '0x1d6492FaAcB1ea15641dD94FB9AB020056aBBC94'.lower(): # v_debt_usdc
+    #     decimals = 1e6
     
-    elif reserve_address == '0xA0cD598EF64856502aE294aa58bFEd90922Fb3c7'.lower(): # yuzu_usdc
-        decimals = 1e6
+    # elif reserve_address == '0xA0cD598EF64856502aE294aa58bFEd90922Fb3c7'.lower(): # yuzu_usdc
+    #     decimals = 1e6
     
-    elif reserve_address == '0x6c29836bE0DCD891C1c4CA77ff8F3A29e4A3Fa5E'.lower(): # v_debt_wbtc
-        decimals = 1e8
+    # elif reserve_address == '0x6c29836bE0DCD891C1c4CA77ff8F3A29e4A3Fa5E'.lower(): # v_debt_wbtc
+    #     decimals = 1e8
     
-    elif reserve_address == '0x770D3eD41f9F57eBB0463Bd435DF7FCc6f1e40Ce'.lower(): # yuzu_wbtc
-        decimals = 1e8
+    # elif reserve_address == '0x770D3eD41f9F57eBB0463Bd435DF7FCc6f1e40Ce'.lower(): # yuzu_wbtc
+    #     decimals = 1e8
     
-    elif reserve_address == '0x3f8F2929a2A461d4B59575F132016348CF526F25'.lower(): # v_debt_weth
-        decimals = 1e18
+    # elif reserve_address == '0x3f8F2929a2A461d4B59575F132016348CF526F25'.lower(): # v_debt_weth
+    #     decimals = 1e18
     
-    elif reserve_address == '0xbc25f58bA700452D66d1E025De6aBFd23a659265'.lower(): # yuzu_weth
-        decimals = 1e18
-    
-
-
+    # elif reserve_address == '0xbc25f58bA700452D66d1E025De6aBFd23a659265'.lower(): # yuzu_weth
+    #     decimals = 1e18
     
 
+
     
-    return decimals
-#gets our reserve price
-#@cache
-# def get_tx_usd_amount(reserve_address, token_amount):
-#     contract_address = '0x8429d0AFade80498EAdb9919E41437A14d45A00B'
-#     contract_abi = [{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"address[]","name":"sources","type":"address[]"},{"internalType":"address","name":"fallbackOracle","type":"address"},{"internalType":"address","name":"baseCurrency","type":"address"},{"internalType":"uint256","name":"baseCurrencyUnit","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"asset","type":"address"},{"indexed":True,"internalType":"address","name":"source","type":"address"}],"name":"AssetSourceUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"baseCurrency","type":"address"},{"indexed":False,"internalType":"uint256","name":"baseCurrencyUnit","type":"uint256"}],"name":"BaseCurrencySet","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"fallbackOracle","type":"address"}],"name":"FallbackOracleUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":True,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"inputs":[],"name":"BASE_CURRENCY","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"BASE_CURRENCY_UNIT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getAssetPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"}],"name":"getAssetsPrices","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getFallbackOracle","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getSourceOfAsset","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"address[]","name":"sources","type":"address[]"}],"name":"setAssetSources","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"fallbackOracle","type":"address"}],"name":"setFallbackOracle","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}]
-#     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-#     value_usd = contract.functions.getAssetPrice(reserve_address).call()
-#     decimals = get_reserve_decimals(reserve_address)
-#     usd_amount = (value_usd/1e18)*(token_amount/decimals)
-#     # print(usd_amount)
-#     return usd_amount
+
+    
+    # return decimals
 
 #gets our web3 contract object
 # @cache
@@ -161,26 +165,41 @@ def get_yuzu_events(contract):
 # # takes in an events object and returns a dataframe with relevent transaction output
 def get_transaction_data(events):
 
+    user_address_list = []
+    token_name_list = []
+    token_address_list = []
+    token_amount_list = []
+    block_number_list = []
+
     for event in events:
         tx_from = event['args']['from'].lower()
         tx_to = event['args']['to'].lower() != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()
 
         if tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
-            print(event['args']['from'])
-            print(event['args']['to'])
-            print(event['args']['value'])
-            print(event['address'])
-            print(event['transactionHash'].hex())
+            print(event)
+            user_address_list.append(tx_to)
+            token_name_list.append('0')
+            token_address_list.append(event['address'])
+            token_amount_list.append(event['args']['value'])
+            block_number_list.append('0')
+            # print(event['args']['from'])
+            # print(event['args']['to'])
+            # print(event['args']['value'])
+            # print(event['address'])
+            # print(event['transactionHash'].hex())
         
         elif tx_from == "0x0000000000000000000000000000000000000000" and tx_to == "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
             print('WETH Gateway Transaction Found!')
-            print(event['transactionHash'].hex())
+            print(event)
+
     return
 
 contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069'
+reserve_info_df = get_reserve_data()
 contract = get_a_token_contract(contract_address)
 events = get_yuzu_events(contract)
 get_transaction_data(events)
+
 
 # find block_numbers that have 
 def is_trancation_we_want_to_track(transaction):
