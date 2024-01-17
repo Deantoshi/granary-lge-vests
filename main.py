@@ -9,6 +9,15 @@ import queue
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+# # Borrow USDC tx: https://eon-explorer.horizenlabs.io/tx/0xa053e235cec7c46b7cc90c92d17abdaec1786b17230ed64835c2a76f2cf95acd
+# # Deposit USDC tx: https://eon-explorer.horizenlabs.io/tx/0xddcd860b32605a558e1e244ace4b970aab5b88c74449eb10e720b0d78af8253b
+# # Borrow BTC tx: https://eon-explorer.horizenlabs.io/tx/0xf6c930a259680c81b35738d9e1982cd9a0b2f5767920d6d0a5a526e912841fec
+# # Deposit BTC tx: https://eon-explorer.horizenlabs.io/tx/0x9be4cac88854d04f6ea10389bf9fcecad8aae7155905a501c13e037228377e19
+# # Borrow ETH tx: https://eon-explorer.horizenlabs.io/tx/0x28fd834d498c5ee3f5f4f8b00be6dcec876906e16e3870a5d51d693c2952dea9
+# # Deposit ETH tx: https://eon-explorer.horizenlabs.io/tx/0x164213e475b2a4c70325c3d75426c4aa0a9e0fe1b1eeb2b9a46c6c83e93a8796
+# # Deposit ZEN tx: https://eon-explorer.horizenlabs.io/tx/0x6cd3d731c1a46f238288abb9c5769b06336281225114e5d2c1a9a234781fa1e4
+# # Borrow ZEN tx: https://eon-explorer.horizenlabs.io/tx/0xb6acca9fabb43ee466a822aa6cb68dd89b52c6cb876ccd7bf554f5da7e049308
+
 app = Flask(__name__)
 
 # Replace with the actual Optimism RPC URL
@@ -27,19 +36,40 @@ FROM_BLOCK = 951714
 # contract_address = "0x871AfF0013bE6218B61b28b274a6F53DB131795F"
 
 
-#gets how many decimals our reserve is
-def get_reserve_decimals(reserve_address):
+# returns basic data about our reserves in a dataframe
+def get_reserve_data(reserve_address):
+    reserve_address = reserve_address.lower()
+
     decimals = 0
-    if reserve_address == '0x38C2a6953F86a7453622B1E7103b738239728754': # dai
+
+    if reserve_address == '0xEB329420Fae03176EC5877c34E2c38580D85E069'.lower(): # yuzuZen
         decimals = 1e18
-    elif reserve_address == '0xCc44eB064CD32AAfEEb2ebb2a47bE0B882383b53': # usdc
-        decimals = 1e6
-    elif reserve_address == '0xA167bcAb6791304EDa9B636C8beEC75b3D2829E6': # usdt
-        decimals = 1e6
-    elif reserve_address == '0x2c2E0B0c643aB9ad03adBe9140627A645E99E054': # weth
+    
+    if reserve_address == '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'.lower(): # v_debt_yuzu
         decimals = 1e18
-    elif reserve_address == '0x1d7fb99AED3C365B4DEf061B7978CE5055Dfc1e7': # wbtc
+
+    elif reserve_address == '0x1d6492FaAcB1ea15641dD94FB9AB020056aBBC94'.lower(): # v_debt_usdc
+        decimals = 1e6
+    
+    elif reserve_address == '0xA0cD598EF64856502aE294aa58bFEd90922Fb3c7'.lower(): # yuzu_usdc
+        decimals = 1e6
+    
+    elif reserve_address == '0x6c29836bE0DCD891C1c4CA77ff8F3A29e4A3Fa5E'.lower(): # v_debt_wbtc
         decimals = 1e8
+    
+    elif reserve_address == '0x770D3eD41f9F57eBB0463Bd435DF7FCc6f1e40Ce'.lower(): # yuzu_wbtc
+        decimals = 1e8
+    
+    elif reserve_address == '0x3f8F2929a2A461d4B59575F132016348CF526F25'.lower(): # v_debt_weth
+        decimals = 1e18
+    
+    elif reserve_address == '0xbc25f58bA700452D66d1E025De6aBFd23a659265'.lower(): # yuzu_weth
+        decimals = 1e18
+    
+
+
+    
+
     
     return decimals
 #gets our reserve price
@@ -74,7 +104,7 @@ def get_last_block_tracked():
 
     return last_block_monitored
 
-print(get_last_block_tracked())
+# print(get_last_block_tracked())
 
 #makes a dataframe and stores it in a csv file
 def make_user_data_csv(df):
@@ -104,47 +134,53 @@ def make_user_data_csv(df):
     
     return
 
-def get_a_yuzu_zen_contract():
-    contract_address = "0xEB329420Fae03176EC5877c34E2c38580D85E069"
+# # takes in an a_token address and returns it's contract object
+def get_a_token_contract(contract_address):
+    # contract_address = "0xEB329420Fae03176EC5877c34E2c38580D85E069"
     contract_abi = [{"type":"event","name":"Approval","inputs":[{"type":"address","name":"owner","internalType":"address","indexed":True},{"type":"address","name":"spender","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"BalanceTransfer","inputs":[{"type":"address","name":"from","internalType":"address","indexed":True},{"type":"address","name":"to","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False},{"type":"uint256","name":"index","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Burn","inputs":[{"type":"address","name":"from","internalType":"address","indexed":True},{"type":"address","name":"target","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False},{"type":"uint256","name":"index","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Initialized","inputs":[{"type":"address","name":"underlyingAsset","internalType":"address","indexed":True},{"type":"address","name":"pool","internalType":"address","indexed":True},{"type":"address","name":"treasury","internalType":"address","indexed":False},{"type":"address","name":"incentivesController","internalType":"address","indexed":False},{"type":"uint8","name":"aTokenDecimals","internalType":"uint8","indexed":False},{"type":"string","name":"aTokenName","internalType":"string","indexed":False},{"type":"string","name":"aTokenSymbol","internalType":"string","indexed":False},{"type":"bytes","name":"params","internalType":"bytes","indexed":False}],"anonymous":False},{"type":"event","name":"Mint","inputs":[{"type":"address","name":"from","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False},{"type":"uint256","name":"index","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Transfer","inputs":[{"type":"address","name":"from","internalType":"address","indexed":True},{"type":"address","name":"to","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"ATOKEN_REVISION","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"bytes32","name":"","internalType":"bytes32"}],"name":"DOMAIN_SEPARATOR","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"bytes","name":"","internalType":"bytes"}],"name":"EIP712_REVISION","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"bytes32","name":"","internalType":"bytes32"}],"name":"PERMIT_TYPEHASH","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"contract ILendingPool"}],"name":"POOL","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"address"}],"name":"RESERVE_TREASURY_ADDRESS","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"address"}],"name":"UNDERLYING_ASSET_ADDRESS","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"_nonces","inputs":[{"type":"address","name":"","internalType":"address"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"allowance","inputs":[{"type":"address","name":"owner","internalType":"address"},{"type":"address","name":"spender","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"approve","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"balanceOf","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"burn","inputs":[{"type":"address","name":"user","internalType":"address"},{"type":"address","name":"receiverOfUnderlying","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"index","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint8","name":"","internalType":"uint8"}],"name":"decimals","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"decreaseAllowance","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"subtractedValue","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"contract IRewarder"}],"name":"getIncentivesController","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint256","name":"","internalType":"uint256"}],"name":"getScaledUserBalanceAndSupply","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"handleRepayment","inputs":[{"type":"address","name":"user","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"increaseAllowance","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"addedValue","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"initialize","inputs":[{"type":"address","name":"pool","internalType":"contract ILendingPool"},{"type":"address","name":"treasury","internalType":"address"},{"type":"address","name":"underlyingAsset","internalType":"address"},{"type":"address","name":"incentivesController","internalType":"contract IRewarder"},{"type":"uint8","name":"aTokenDecimals","internalType":"uint8"},{"type":"string","name":"aTokenName","internalType":"string"},{"type":"string","name":"aTokenSymbol","internalType":"string"},{"type":"bytes","name":"params","internalType":"bytes"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"mint","inputs":[{"type":"address","name":"user","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"index","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"mintToTreasury","inputs":[{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"index","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"string","name":"","internalType":"string"}],"name":"name","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"permit","inputs":[{"type":"address","name":"owner","internalType":"address"},{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"value","internalType":"uint256"},{"type":"uint256","name":"deadline","internalType":"uint256"},{"type":"uint8","name":"v","internalType":"uint8"},{"type":"bytes32","name":"r","internalType":"bytes32"},{"type":"bytes32","name":"s","internalType":"bytes32"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"scaledBalanceOf","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"scaledTotalSupply","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"string","name":"","internalType":"string"}],"name":"symbol","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"totalSupply","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"transfer","inputs":[{"type":"address","name":"recipient","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"transferFrom","inputs":[{"type":"address","name":"sender","internalType":"address"},{"type":"address","name":"recipient","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"transferOnLiquidation","inputs":[{"type":"address","name":"from","internalType":"address"},{"type":"address","name":"to","internalType":"address"},{"type":"uint256","name":"value","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"transferUnderlyingTo","inputs":[{"type":"address","name":"target","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]}]
     
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
     return contract
 
-def get_v_yuzu_zen_contract():
-    contract_address = "0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6"
+# # takes in an v_token address and returns it's contract object
+def get_v_token_contract(contract_address):
+    # contract_address = "0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6"
     contract_abi = [{"type":"event","name":"Approval","inputs":[{"type":"address","name":"owner","internalType":"address","indexed":True},{"type":"address","name":"spender","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"BorrowAllowanceDelegated","inputs":[{"type":"address","name":"fromUser","internalType":"address","indexed":True},{"type":"address","name":"toUser","internalType":"address","indexed":True},{"type":"address","name":"asset","internalType":"address","indexed":False},{"type":"uint256","name":"amount","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Burn","inputs":[{"type":"address","name":"user","internalType":"address","indexed":True},{"type":"uint256","name":"amount","internalType":"uint256","indexed":False},{"type":"uint256","name":"currentBalance","internalType":"uint256","indexed":False},{"type":"uint256","name":"balanceIncrease","internalType":"uint256","indexed":False},{"type":"uint256","name":"avgStableRate","internalType":"uint256","indexed":False},{"type":"uint256","name":"newTotalSupply","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Initialized","inputs":[{"type":"address","name":"underlyingAsset","internalType":"address","indexed":True},{"type":"address","name":"pool","internalType":"address","indexed":True},{"type":"address","name":"incentivesController","internalType":"address","indexed":False},{"type":"uint8","name":"debtTokenDecimals","internalType":"uint8","indexed":False},{"type":"string","name":"debtTokenName","internalType":"string","indexed":False},{"type":"string","name":"debtTokenSymbol","internalType":"string","indexed":False},{"type":"bytes","name":"params","internalType":"bytes","indexed":False}],"anonymous":False},{"type":"event","name":"Mint","inputs":[{"type":"address","name":"user","internalType":"address","indexed":True},{"type":"address","name":"onBehalfOf","internalType":"address","indexed":True},{"type":"uint256","name":"amount","internalType":"uint256","indexed":False},{"type":"uint256","name":"currentBalance","internalType":"uint256","indexed":False},{"type":"uint256","name":"balanceIncrease","internalType":"uint256","indexed":False},{"type":"uint256","name":"newRate","internalType":"uint256","indexed":False},{"type":"uint256","name":"avgStableRate","internalType":"uint256","indexed":False},{"type":"uint256","name":"newTotalSupply","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Transfer","inputs":[{"type":"address","name":"from","internalType":"address","indexed":True},{"type":"address","name":"to","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"DEBT_TOKEN_REVISION","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"contract ILendingPool"}],"name":"POOL","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"address"}],"name":"UNDERLYING_ASSET_ADDRESS","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"allowance","inputs":[{"type":"address","name":"owner","internalType":"address"},{"type":"address","name":"spender","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"approve","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"approveDelegation","inputs":[{"type":"address","name":"delegatee","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"balanceOf","inputs":[{"type":"address","name":"account","internalType":"address"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"borrowAllowance","inputs":[{"type":"address","name":"fromUser","internalType":"address"},{"type":"address","name":"toUser","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"burn","inputs":[{"type":"address","name":"user","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint8","name":"","internalType":"uint8"}],"name":"decimals","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"decreaseAllowance","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"subtractedValue","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"getAverageStableRate","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"contract IRewarder"}],"name":"getIncentivesController","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint40","name":"","internalType":"uint40"}],"name":"getSupplyData","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint256","name":"","internalType":"uint256"}],"name":"getTotalSupplyAndAvgRate","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint40","name":"","internalType":"uint40"}],"name":"getTotalSupplyLastUpdated","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint40","name":"","internalType":"uint40"}],"name":"getUserLastUpdated","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"getUserStableRate","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"increaseAllowance","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"addedValue","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"initialize","inputs":[{"type":"address","name":"pool","internalType":"contract ILendingPool"},{"type":"address","name":"underlyingAsset","internalType":"address"},{"type":"address","name":"incentivesController","internalType":"contract IRewarder"},{"type":"uint8","name":"debtTokenDecimals","internalType":"uint8"},{"type":"string","name":"debtTokenName","internalType":"string"},{"type":"string","name":"debtTokenSymbol","internalType":"string"},{"type":"bytes","name":"params","internalType":"bytes"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"mint","inputs":[{"type":"address","name":"user","internalType":"address"},{"type":"address","name":"onBehalfOf","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"rate","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"string","name":"","internalType":"string"}],"name":"name","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"principalBalanceOf","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"string","name":"","internalType":"string"}],"name":"symbol","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"totalSupply","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"transfer","inputs":[{"type":"address","name":"recipient","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"transferFrom","inputs":[{"type":"address","name":"sender","internalType":"address"},{"type":"address","name":"recipient","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]}]    
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
     return contract
 
-
-def get_a_yuzu_zen_transfers(contract):
+# # takes in a contract object and returns all associated events
+def get_yuzu_events(contract):
     
     events = contract.events.Transfer.get_logs(fromBlock=FROM_BLOCK, toBlock=LATEST_BLOCK)
     
     return events
 
-def get_deposits(events):
+# # takes in an events object and returns a dataframe with relevent transaction output
+def get_transaction_data(events):
 
     for event in events:
         tx_from = event['args']['from'].lower()
         tx_to = event['args']['to'].lower() != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()
 
-        if event['args']['from'].lower() == "0x0000000000000000000000000000000000000000" and event['args']['to'].lower() != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
+        if tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
             print(event['args']['from'])
             print(event['args']['to'])
             print(event['args']['value'])
             print(event['address'])
             print(event['transactionHash'].hex())
+        
+        elif tx_from == "0x0000000000000000000000000000000000000000" and tx_to == "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
+            print('WETH Gateway Transaction Found!')
+            print(event['transactionHash'].hex())
     return
 
-
-# contract = get_a_yuzu_zen_contract()
-contract = get_v_yuzu_zen_contract()
-events = get_a_yuzu_zen_transfers(contract)
-get_deposits(events)
+contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069'
+contract = get_a_token_contract(contract_address)
+events = get_yuzu_events(contract)
+get_transaction_data(events)
 
 # find block_numbers that have 
 def is_trancation_we_want_to_track(transaction):
@@ -311,4 +347,4 @@ def get_transactions():
 # if __name__ == "__main__":
 #     app.run()
 
-get_all_gateway_transactions()
+# get_all_gateway_transactions()
