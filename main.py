@@ -163,7 +163,7 @@ def get_yuzu_events(contract):
     return events
 
 # # takes in an events object and returns a dataframe with relevent transaction output
-def get_transaction_data(events):
+def get_transaction_data(events, reserve_df):
 
     user_address_list = []
     token_name_list = []
@@ -176,11 +176,17 @@ def get_transaction_data(events):
         tx_to = event['args']['to'].lower() != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()
 
         if tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
+            token_address = event['address'].lower()
+            token_amount = event['args']['value']
+            temp_df = reserve_df.loc[reserve_df['reserve_address'] == token_address]
+
+            # get whole numbers of our token amount
+            token_amount = round(token_amount / temp_df['reserve_decimal'].iloc[0], 5)
             print(event)
             user_address_list.append(tx_to)
             token_name_list.append('0')
-            token_address_list.append(event['address'])
-            token_amount_list.append(event['args']['value'])
+            token_address_list.append(token_address)
+            token_amount_list.append(token_amount)
             block_number_list.append('0')
             # print(event['args']['from'])
             # print(event['args']['to'])
@@ -194,11 +200,12 @@ def get_transaction_data(events):
 
     return
 
+
 contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069'
-reserve_info_df = get_reserve_data()
+reserve_df = get_reserve_data()
 contract = get_a_token_contract(contract_address)
 events = get_yuzu_events(contract)
-get_transaction_data(events)
+get_transaction_data(events, reserve_df)
 
 
 # find block_numbers that have 
