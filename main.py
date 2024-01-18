@@ -138,6 +138,32 @@ def make_user_data_csv(df):
     
     return
 
+# handles our csv writing
+def make_transactions_csv(df):
+    old_df = pd.read_csv('user_transactions.csv')
+    old_df = old_df.drop_duplicates(subset=['wallet_address','token_name','number_of_tokens','reserve_address','tx_hash','block_number'], keep='last')
+
+    combined_df_list = [df, old_df]
+
+    combined_df = pd.concat(combined_df_list)
+    combined_df = combined_df.drop_duplicates(subset=['wallet_address','token_name','number_of_tokens','reserve_address','tx_hash','block_number'], keep='last')
+
+    print(combined_df.dtypes)
+    combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
+    combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
+
+    if len(combined_df) >= len(old_df):
+        combined_df['last_block_number'] = int(df['last_block_number'].max())
+        combined_df.to_csv('user_transactions.csv', index=False)
+        print('CSV Made')
+
+    elif len(combined_df) > 0:
+        combined_df['last_block_number'] = int(df['last_block_number'].max())
+        combined_df.to_csv('user_transactions.csv', index=False)
+        print('CSV Made')
+    
+    return
+
 # # takes in an a_token address and returns it's contract object
 def get_a_token_contract(contract_address):
     # contract_address = "0xEB329420Fae03176EC5877c34E2c38580D85E069"
@@ -172,9 +198,11 @@ def get_transaction_data(events, reserve_df):
     block_number_list = []
     tx_hash_list = []
 
+    all_block_list = []
+
     for event in events:
         tx_from = event['args']['from'].lower()
-        tx_to = event['args']['to'].lower() != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()
+        tx_to = event['args']['to'].lower()
 
         if tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
             token_address = event['address'].lower()
@@ -184,13 +212,17 @@ def get_transaction_data(events, reserve_df):
             # get whole numbers of our token amount
             token_amount = round(token_amount / temp_df['reserve_decimal'].iloc[0], 5)
             token_name = temp_df['reserve_name'].iloc[0]
+            block_number = int(event['blockNumber'])
 
             print(event)
             user_address_list.append(tx_to)
             token_name_list.append(token_name)
             token_address_list.append(token_address)
             token_amount_list.append(token_amount)
-            block_number_list.append(int(event['blockNumber']))
+            block_number_list.append(block_number)
+
+            all_block_list.append(block_number)
+
             tx_hash_list.append(event['transactionHash'].hex().lower())
         
         elif tx_from == "0x0000000000000000000000000000000000000000" and tx_to == "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
@@ -206,7 +238,13 @@ def get_transaction_data(events, reserve_df):
     df['tx_hash'] = tx_hash_list
     df['block_number'] = block_number_list
 
-    df.to_csv('user_transactions.csv', index=False)
+    df['last_block_number'] = max(block_number_list)
+
+    df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']] = df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']].astype(str)
+
+    #handles our transactions
+    make_transactions_csv(df)
+    # df.to_csv('user_transactions.csv', index=False)
     return
 
 
@@ -217,13 +255,6 @@ events = get_yuzu_events(contract)
 get_transaction_data(events, reserve_df)
 
 
-# find block_numbers that have 
-def is_trancation_we_want_to_track(transaction):
-
-    if transaction['to'] == '0x89Aca10e0cb228239c0Aa71729E14D60867299aB':
-        print(transaction)
-
-    return
 
 # Gets transactions of all blocks within a specified range and returns a df with info from blocks that include our contract
 def get_all_gateway_transactions():
