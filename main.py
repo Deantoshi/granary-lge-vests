@@ -188,6 +188,49 @@ def get_yuzu_events(contract):
     
     return events
 
+# # first quest that will add column to df and specify 0 as False and 1 as true
+def user_made_transaction(df):
+    df['user_made_transaction'] = 1
+    return df
+
+# # takes in our whole dataframe, wallet_address, reserve_address, minimum_tokens
+# # will return whether the user has a transaction for a certain token that passes that token's minimum transfer
+# # example: Can check whether a user has deposited 10 zen in one transaction
+def is_quest_completed(df, wallet_address, reserve_address, minimum_tokens):
+
+    df = df.loc[df['wallet_address'] == wallet_address]
+    df = df.loc[df['reserve_address'] == reserve_address]
+
+    is_completed = -1
+
+    if len(df) > 0:
+        tokens_transacted = df['number_of_tokens'].max()
+
+        if tokens_transacted >= minimum_tokens:
+            is_completed = 1
+    
+    else:
+        is_completed = 0
+
+    return is_completed
+
+# # Second quest that will add column to df and specify 0 as False and 1 as true
+# # User deposited 10 Zen in one transaction
+def user_deposited_10_zen(df, wallet_address):
+
+    reserve_address = '0xeb329420fae03176ec5877c34e2c38580d85e069'
+    minimum_tokens = 10
+    quest_name = '10_zen_deposited'
+
+    is_completed = is_quest_completed(wallet_address, reserve_address, minimum_tokens, quest_name)
+
+
+    return df
+
+df = pd.read_csv('user_transactions.csv')
+
+completed = is_quest_completed(df, '0x54f7d603881d850a83ec29e2a1dd61e4d0b8d58a', '0xeb329420fae03176ec5877c34e2c38580d85e069', 0.00001)
+
 # # takes in an events object and returns a dataframe with relevent transaction output
 def get_transaction_data(events, reserve_df):
 
