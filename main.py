@@ -170,6 +170,7 @@ def get_transaction_data(events, reserve_df):
     token_address_list = []
     token_amount_list = []
     block_number_list = []
+    tx_hash_list = []
 
     for event in events:
         tx_from = event['args']['from'].lower()
@@ -182,22 +183,30 @@ def get_transaction_data(events, reserve_df):
 
             # get whole numbers of our token amount
             token_amount = round(token_amount / temp_df['reserve_decimal'].iloc[0], 5)
+            token_name = temp_df['reserve_name'].iloc[0]
+
             print(event)
             user_address_list.append(tx_to)
-            token_name_list.append('0')
+            token_name_list.append(token_name)
             token_address_list.append(token_address)
             token_amount_list.append(token_amount)
-            block_number_list.append('0')
-            # print(event['args']['from'])
-            # print(event['args']['to'])
-            # print(event['args']['value'])
-            # print(event['address'])
-            # print(event['transactionHash'].hex())
+            block_number_list.append(int(event['blockNumber']))
+            tx_hash_list.append(event['transactionHash'].hex().lower())
         
         elif tx_from == "0x0000000000000000000000000000000000000000" and tx_to == "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
             print('WETH Gateway Transaction Found!')
             print(event)
 
+    df = pd.DataFrame()
+
+    df['wallet_address'] = user_address_list
+    df['token_name'] = token_name_list
+    df['number_of_tokens'] = token_amount_list
+    df['reserve_address'] = token_address_list
+    df['tx_hash'] = tx_hash_list
+    df['block_number'] = block_number_list
+
+    df.to_csv('user_transactions.csv', index=False)
     return
 
 
