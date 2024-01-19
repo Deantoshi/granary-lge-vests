@@ -312,6 +312,8 @@ def user_borrowed_02_weth(df):
 
     return df
 
+# # aggregate function to find the results of all of our quests
+# # returns a dataframe
 def find_4_quests(df):
 
     df = user_deposited_10_zen(df)
@@ -431,9 +433,6 @@ def find_all_transactions():
     
     return df
 
-df = find_all_transactions()
-print(df)
-
 # Gets transactions of all blocks within a specified range and returns a df with info from blocks that include our contract
 def get_all_gateway_transactions():
 
@@ -530,17 +529,21 @@ def make_api_response_string_2(df, quest_completed_number):
     
     data = []
 
-    quest_complete = 'False'
+    quest_complete = False
+
+    # safeguard incase the wrong quest_number is shared
+    if quest_completed_number == -1:
+        quest_complete = False
 
     #if we have an address with no transactions
     if len(df) < 1 or quest_completed_number == 0:
-        quest_complete = 'False'
+        quest_complete = False
 
     elif len(df) > 0 and quest_completed_number == 1:
-        quest_complete = 'True'
+        quest_complete = True
     
     else:
-        quest_complete = 'False'
+        quest_complete = False
 
     # Create JSON response
     response = {
@@ -593,14 +596,22 @@ def search_and_respond_3(address, queue, quest_number):
         quest_column = '25_usdc_borrowed'
     elif quest_number == 4:
         quest_column = '02_weth_borrowed'
+
+    else:
+        quest_number = -1
+
     
     df = pd.read_csv('user_transactions.csv')
 
     df = df.loc[df['wallet_address'] == address]
-    df = df.loc[df[quest_column] == address]
+    # df = df.loc[df[quest_column] == address]
 
     # # number to track whether the user completed the quest or not
-    quest_completed_number = int(df[quest_column].max())
+    # # if we don't have a record for the user, we will assume they haven't completed the quest
+    if len(df) > 0 and quest_number != -1:
+        quest_completed_number = int(df[quest_column].max())
+    else:
+        quest_completed_number = 0
 
     response = make_api_response_string_2(df, quest_completed_number)
 
@@ -619,6 +630,7 @@ def get_transactions():
 
     if "address" in data:
         address = data["address"].lower()
+        quest_number = int(data["quest_number"])
         response = "Address Sent"
         print("Address Sent")
         is_address = True
@@ -629,7 +641,8 @@ def get_transactions():
 
     # search_and_respond_2(address, result_queue)
     if is_address == True:
-        thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
+        # thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
+        thread = threading.Thread(target=search_and_respond_3, args=(address, result_queue, quest_number))
         thread.start()
     
     # else:
@@ -639,7 +652,9 @@ def get_transactions():
 
     return jsonify(response), 200
 
-# if __name__ == "__main__":
-#     app.run()
+if __name__ == "__main__":
+    app.run()
 
 # get_all_gateway_transactions()
+# df = find_all_transactions()
+# print(df)
