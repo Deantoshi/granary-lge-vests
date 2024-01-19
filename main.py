@@ -216,28 +216,92 @@ def is_quest_completed(df, wallet_address, reserve_address, minimum_tokens):
 
         if tokens_transacted >= minimum_tokens:
             is_completed = 1
+        
+        else:
+            is_completed = 0
     
     else:
         is_completed = 0
 
-    return is_completed
+    return int(is_completed)
 
 # # Second quest that will add column to df and specify 0 as False and 1 as true
 # # User deposited 10 Zen in one transaction
-def user_deposited_10_zen(df, wallet_address):
+def user_deposited_10_zen(df):
 
     reserve_address = '0xeb329420fae03176ec5877c34e2c38580d85e069'
     minimum_tokens = 10
     quest_name = '10_zen_deposited'
 
-    is_completed = is_quest_completed(wallet_address, reserve_address, minimum_tokens, quest_name)
 
+    wallet_address_list = df['wallet_address'].tolist()
 
+    print(df)
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+        completed_list.append(is_completed)
+
+    df[quest_name] = completed_list
+
+    print(df)
     return df
 
-# df = pd.read_csv('user_transactions.csv')
+# # Third quest that will add column to df and specify 0 as False and 1 as true
+# # User deposited 10 Zen in one transaction
+def user_deposited_001_wbtc(df):
 
-# completed = is_quest_completed(df, '0x54f7d603881d850a83ec29e2a1dd61e4d0b8d58a', '0xeb329420fae03176ec5877c34e2c38580d85e069', 0.00001)
+    reserve_address = '0x770d3ed41f9f57ebb0463bd435df7fcc6f1e40ce'
+    minimum_tokens = 0.001
+    quest_name = '001_wbtc_deposited'
+
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    print(df)
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+        completed_list.append(is_completed)
+
+    df[quest_name] = completed_list
+
+    print(df)
+    return df
+
+df = pd.read_csv('user_transactions.csv')
+
+user_deposited_10_zen(df)
+print('')
+
+def make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list):
+    
+    # handles blank dataframes
+    if len(user_address_list) < 1:
+        df = pd.read_csv('user_transactions.csv')
+        df['last_block_number'] = int(max(all_block_list))
+
+    else:
+        df = pd.DataFrame()
+        df['wallet_address'] = user_address_list
+        df['token_name'] = token_name_list
+        df['number_of_tokens'] = token_amount_list
+        df['reserve_address'] = token_address_list
+        df['tx_hash'] = tx_hash_list
+        df['block_number'] = block_number_list
+
+        df['last_block_number'] = max(all_block_list)
+
+        df['q_made_transaction'] = made_transaction_list
+
+        df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']] = df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']].astype(str)
+    
+    
+    return df
 
 # # takes in an events object and returns a dataframe with relevent transaction output
 def get_transaction_data(events, reserve_df):
@@ -248,6 +312,9 @@ def get_transaction_data(events, reserve_df):
     token_amount_list = []
     block_number_list = []
     tx_hash_list = []
+    
+    # our quest lists below
+    made_transaction_list = []
 
     all_block_list = [0]
 
@@ -275,28 +342,14 @@ def get_transaction_data(events, reserve_df):
             all_block_list.append(block_number)
 
             tx_hash_list.append(event['transactionHash'].hex().lower())
+
+            made_transaction_list.append(int(1))
         
         elif tx_from == "0x0000000000000000000000000000000000000000" and tx_to == "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
             print('WETH Gateway Transaction Found!')
             print(event)
 
-    # handles blank dataframes
-    if len(user_address_list) < 1:
-        df = pd.read_csv('user_transactions.csv')
-        df['last_block_number'] = int(max(all_block_list))
-
-    else:
-        df = pd.DataFrame()
-        df['wallet_address'] = user_address_list
-        df['token_name'] = token_name_list
-        df['number_of_tokens'] = token_amount_list
-        df['reserve_address'] = token_address_list
-        df['tx_hash'] = tx_hash_list
-        df['block_number'] = block_number_list
-
-        df['last_block_number'] = max(all_block_list)
-
-        df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']] = df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']].astype(str)
+    df = make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list)
     
     # # makes our dataframe
     make_transactions_csv(df)
@@ -304,13 +357,13 @@ def get_transaction_data(events, reserve_df):
 
 
 # # aZen
-contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069' 
-# # vZen
-# contract_address = '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'
-reserve_df = get_reserve_data()
-contract = get_a_token_contract(contract_address)
-events = get_yuzu_events(contract)
-get_transaction_data(events, reserve_df)
+# contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069' 
+# # # vZen
+# # contract_address = '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'
+# reserve_df = get_reserve_data()
+# contract = get_a_token_contract(contract_address)
+# events = get_yuzu_events(contract)
+# get_transaction_data(events, reserve_df)
 
 
 
@@ -376,11 +429,6 @@ def get_all_gateway_transactions():
     make_user_data_csv(df)
 
 # get_all_gateway_transactions()
-
-#gets the ids of all twitter followers of yuzu
-# twitter api yahooooooo
-def get_all_twitter_follows():
-    return
 
 
 # formats our dataframe response
