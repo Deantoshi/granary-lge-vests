@@ -311,11 +311,19 @@ def user_borrowed_02_weth(df):
 
 df = pd.read_csv('user_transactions.csv')
 
-# user_deposited_10_zen(df)
-# user_deposited_001_wbtc(df)
-# user_borrowed_25_usdc(df)
-user_borrowed_02_weth(df)
-print('')
+def find_4_quests(df):
+
+    df = user_deposited_10_zen(df)
+    df = user_deposited_001_wbtc(df)
+    df = user_borrowed_25_usdc(df)
+    df = user_borrowed_02_weth(df)
+
+    return df
+
+df = find_4_quests(df)
+
+print(df)
+print()
 
 def make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list):
     
