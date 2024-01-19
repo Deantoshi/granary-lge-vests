@@ -250,7 +250,7 @@ def user_deposited_10_zen(df):
     return df
 
 # # Third quest that will add column to df and specify 0 as False and 1 as true
-# # User deposited 10 Zen in one transaction
+# # User deposited 0.001 wbtc in one transaction
 def user_deposited_001_wbtc(df):
 
     reserve_address = '0x770d3ed41f9f57ebb0463bd435df7fcc6f1e40ce'
@@ -273,9 +273,35 @@ def user_deposited_001_wbtc(df):
     print(df)
     return df
 
+# # 4th quest that will add column to df and specify 0 as False and 1 as true
+# # User borrowed 25usdc in one transaction
+def user_borrowed_25_usdc(df):
+
+    reserve_address = '0x1d6492faacb1ea15641dd94fb9ab020056abbc94'
+    minimum_tokens = 25
+    quest_name = '25_usdc_borrowed'
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    print(df)
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+        completed_list.append(is_completed)
+
+    df[quest_name] = completed_list
+
+
+    print(df)
+    return df
+
 df = pd.read_csv('user_transactions.csv')
 
-user_deposited_10_zen(df)
+# user_deposited_10_zen(df)
+# user_deposited_001_wbtc(df)
+user_borrowed_25_usdc(df)
 print('')
 
 def make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list):
