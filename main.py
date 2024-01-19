@@ -7,6 +7,7 @@ from functools import cache
 import threading 
 import queue
 import time
+import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 # # Borrow USDC tx: https://eon-explorer.horizenlabs.io/tx/0xa053e235cec7c46b7cc90c92d17abdaec1786b17230ed64835c2a76f2cf95acd
@@ -403,7 +404,8 @@ def get_transaction_data(events, reserve_df):
     
     return df
 
-# runs all our looks
+# # runs all our looks
+# # updates our csv
 def find_all_transactions():
     # # aZen
     # contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069' 
@@ -617,6 +619,34 @@ def search_and_respond_3(address, queue, quest_number):
 
     queue.put(response)
 
+# # will update our user_transactions.csv periodically
+# # updates if 15 minutes has passed since the last update
+def cooldown_handler():
+
+    current_timestamp = time.time()
+
+    cooldown_df = pd.read_csv('cooldown.csv')
+
+    next_update = cooldown_df['next_update_timestamp'].iloc[0]
+
+    if current_timestamp >= next_update:
+        datetime_obj = datetime.datetime.fromtimestamp(next_update)
+        fifteen_minutes_later = datetime_obj + datetime.timedelta(minutes=15)
+
+        fifteen_minutes_later = int(fifteen_minutes_later.timestamp())
+
+        cooldown_df['next_update_timestamp'] = fifteen_minutes_later
+        
+        cooldown_df.to_csv('cooldown.csv')
+        # Print the original and adjusted timestamps
+        # print("Original timestamp:", next_update)
+        # print("Timestamp 15 minutes later:", fifteen_minutes_later)
+
+        find_all_transactions()
+
+    return current_timestamp
+
+print(cooldown_handler())
 #reads from csv
 @app.route("/transactions/", methods=["POST"])
 def get_transactions():
