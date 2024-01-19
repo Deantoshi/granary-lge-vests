@@ -246,7 +246,6 @@ def user_deposited_10_zen(df):
 
     df[quest_name] = completed_list
 
-    print(df)
     return df
 
 # # Third quest that will add column to df and specify 0 as False and 1 as true
@@ -260,8 +259,6 @@ def user_deposited_001_wbtc(df):
 
     wallet_address_list = df['wallet_address'].tolist()
 
-    print(df)
-
     completed_list = []
 
     for wallet_address in wallet_address_list:
@@ -270,7 +267,6 @@ def user_deposited_001_wbtc(df):
 
     df[quest_name] = completed_list
 
-    print(df)
     return df
 
 # # 4th quest that will add column to df and specify 0 as False and 1 as true
@@ -283,8 +279,6 @@ def user_borrowed_25_usdc(df):
 
     wallet_address_list = df['wallet_address'].tolist()
 
-    print(df)
-
     completed_list = []
 
     for wallet_address in wallet_address_list:
@@ -293,12 +287,10 @@ def user_borrowed_25_usdc(df):
 
     df[quest_name] = completed_list
 
-
-    print(df)
     return df
 
 # # 5th quest that will add column to df and specify 0 as False and 1 as true
-# # User borrowed 25usdc in one transaction
+# # User borrowed 02 weth in one transaction
 def user_borrowed_02_weth(df):
 
     reserve_address = '0x3f8f2929a2a461d4b59575f132016348cf526f25'
@@ -307,8 +299,6 @@ def user_borrowed_02_weth(df):
 
     wallet_address_list = df['wallet_address'].tolist()
 
-    print(df)
-
     completed_list = []
 
     for wallet_address in wallet_address_list:
@@ -317,8 +307,6 @@ def user_borrowed_02_weth(df):
 
     df[quest_name] = completed_list
 
-
-    print(df)
     return df
 
 df = pd.read_csv('user_transactions.csv')
