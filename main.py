@@ -297,11 +297,36 @@ def user_borrowed_25_usdc(df):
     print(df)
     return df
 
+# # 5th quest that will add column to df and specify 0 as False and 1 as true
+# # User borrowed 25usdc in one transaction
+def user_borrowed_02_weth(df):
+
+    reserve_address = '0x3f8f2929a2a461d4b59575f132016348cf526f25'
+    minimum_tokens = 0.02
+    quest_name = '02_weth_borrowed'
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    print(df)
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+        completed_list.append(is_completed)
+
+    df[quest_name] = completed_list
+
+
+    print(df)
+    return df
+
 df = pd.read_csv('user_transactions.csv')
 
 # user_deposited_10_zen(df)
 # user_deposited_001_wbtc(df)
-user_borrowed_25_usdc(df)
+# user_borrowed_25_usdc(df)
+user_borrowed_02_weth(df)
 print('')
 
 def make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list):
