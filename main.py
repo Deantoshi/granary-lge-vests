@@ -526,18 +526,21 @@ def make_api_response_string(df):
     return response
 
 # formats our dataframe response
-def make_api_response_string_2(df):
+def make_api_response_string_2(df, quest_completed_number):
     
     data = []
 
     quest_complete = 'False'
 
     #if we have an address with no transactions
-    if len(df) < 1:
+    if len(df) < 1 or quest_completed_number == 0:
         quest_complete = 'False'
 
-    else:
+    elif len(df) > 0 and quest_completed_number == 1:
         quest_complete = 'True'
+    
+    else:
+        quest_complete = 'False'
 
     # Create JSON response
     response = {
@@ -574,14 +577,32 @@ def search_and_respond_2(address, queue):
 
     queue.put(response)
 
-# just reads from csv file
+# reads from csv and makes our relevant df
 def search_and_respond_3(address, queue, quest_number):
+    
+    # # default quest
+    quest_column = 'q_made_transaction'
+    
+    if quest_number == 0:
+        quest_column = 'q_made_transaction'
+    elif quest_number == 1:
+        quest_column = '10_zen_deposited'
+    elif quest_number == 2:
+        quest_column = '001_wbtc_deposited'
+    elif quest_number == 3:
+        quest_column = '25_usdc_borrowed'
+    elif quest_number == 4:
+        quest_column = '02_weth_borrowed'
     
     df = pd.read_csv('user_transactions.csv')
 
     df = df.loc[df['wallet_address'] == address]
+    df = df.loc[df[quest_column] == address]
 
-    response = make_api_response_string_2(df)
+    # # number to track whether the user completed the quest or not
+    quest_completed_number = int(df[quest_column].max())
+
+    response = make_api_response_string_2(df, quest_completed_number)
 
     queue.put(response)
 
