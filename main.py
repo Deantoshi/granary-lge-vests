@@ -192,7 +192,12 @@ def get_v_token_contract(contract_address):
 # # takes in a contract object and returns all associated events
 def get_yuzu_events(contract):
     
-    events = contract.events.Transfer.get_logs(fromBlock=FROM_BLOCK, toBlock='latest')
+    latest_block = web3.eth.get_block('latest')
+    latest_block = int(latest_block['number'])
+
+    from_block = latest_block - 5000
+
+    events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
     
     return events
 
@@ -235,8 +240,6 @@ def user_deposited_10_zen(df):
 
 
     wallet_address_list = df['wallet_address'].tolist()
-
-    print(df)
 
     completed_list = []
 
@@ -309,8 +312,6 @@ def user_borrowed_02_weth(df):
 
     return df
 
-df = pd.read_csv('user_transactions.csv')
-
 def find_4_quests(df):
 
     df = user_deposited_10_zen(df)
@@ -320,10 +321,6 @@ def find_4_quests(df):
 
     return df
 
-df = find_4_quests(df)
-
-print(df)
-print()
 
 def make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list):
     
@@ -368,7 +365,7 @@ def get_transaction_data(events, reserve_df):
     for event in events:
         tx_from = event['args']['from'].lower()
         tx_to = event['args']['to'].lower()
-        print(event)
+        # print(event)
 
         if (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()) and (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x54F7D603881d850A83ec29e2A1DD61e4D0b8D58A".lower()):
             token_address = event['address'].lower()
@@ -397,22 +394,45 @@ def get_transaction_data(events, reserve_df):
             print(event)
 
     df = make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list)
-    
+
+    df = find_4_quests(df)
     # # makes our dataframe
     make_transactions_csv(df)
-    return
+    
+    return df
 
+# runs all our looks
+def find_all_transactions():
+    # # aZen
+    # contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069' 
+    # # # vZen
+    # # contract_address = '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'
+    reserve_df = get_reserve_data()
 
-# # aZen
-# contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069' 
-# # # vZen
-# # contract_address = '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'
-# reserve_df = get_reserve_data()
-# contract = get_a_token_contract(contract_address)
-# events = get_yuzu_events(contract)
-# get_transaction_data(events, reserve_df)
+    # reserve_address_list = reserve_df['reserve_address'].tolist()
 
+    a_token_list = ['0xEB329420Fae03176EC5877c34E2c38580D85E069', '0xA0cD598EF64856502aE294aa58bFEd90922Fb3c7', '0x770D3eD41f9F57eBB0463Bd435DF7FCc6f1e40Ce', '0xbc25f58bA700452D66d1E025De6aBFd23a659265']
+    v_token_list = ['0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6', '0x1d6492FaAcB1ea15641dD94FB9AB020056aBBC94', '0x6c29836bE0DCD891C1c4CA77ff8F3A29e4A3Fa5E', '0x3f8F2929a2A461d4B59575F132016348CF526F25']
 
+    reserve_address_list = ['0xEB329420Fae03176EC5877c34E2c38580D85E069', '0xA0cD598EF64856502aE294aa58bFEd90922Fb3c7', '0x770D3eD41f9F57eBB0463Bd435DF7FCc6f1e40Ce', '0xbc25f58bA700452D66d1E025De6aBFd23a659265',
+                    '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6', '0x1d6492FaAcB1ea15641dD94FB9AB020056aBBC94', '0x6c29836bE0DCD891C1c4CA77ff8F3A29e4A3Fa5E', '0x3f8F2929a2A461d4B59575F132016348CF526F25']
+
+    for reserve_address in reserve_address_list:
+        if reserve_address in a_token_list:
+            contract = get_a_token_contract(reserve_address)
+        else:
+            contract = get_v_token_contract(reserve_address)
+
+        events = get_yuzu_events(contract)
+        try:
+            df = get_transaction_data(events, reserve_df)
+        except:
+            print(reserve_address, 'failed')
+    
+    return df
+
+df = find_all_transactions()
+print(df)
 
 # Gets transactions of all blocks within a specified range and returns a df with info from blocks that include our contract
 def get_all_gateway_transactions():
@@ -505,6 +525,33 @@ def make_api_response_string(df):
     
     return response
 
+# formats our dataframe response
+def make_api_response_string_2(df):
+    
+    data = []
+
+    quest_complete = 'False'
+
+    #if we have an address with no transactions
+    if len(df) < 1:
+        quest_complete = 'False'
+
+    else:
+        quest_complete = 'True'
+
+    # Create JSON response
+    response = {
+        "error": {
+            "code": 0,
+            "message": "success"
+        },
+        "data": {
+            "result": quest_complete
+        }
+    }
+    
+    return response
+
 # reads csv for twitter kids
 def search_and_respond(twitter_id, queue):
 
@@ -519,11 +566,22 @@ def search_and_respond(twitter_id, queue):
 # just reads from csv file
 def search_and_respond_2(address, queue):
     
-    df = pd.read_csv('all_users.csv')
+    df = pd.read_csv('user_transactions.csv')
 
     df = df.loc[df['wallet_address'] == address]
 
     response = make_api_response_string(df)
+
+    queue.put(response)
+
+# just reads from csv file
+def search_and_respond_3(address, queue, quest_number):
+    
+    df = pd.read_csv('user_transactions.csv')
+
+    df = df.loc[df['wallet_address'] == address]
+
+    response = make_api_response_string_2(df)
 
     queue.put(response)
 
@@ -533,6 +591,8 @@ def get_transactions():
 
     data = json.loads(request.data)  # Parse JSON string into JSON object
 
+    print(data)
+
     #used to help determine if we received an address or a twitter profile
     is_address = True
 
@@ -541,12 +601,7 @@ def get_transactions():
         response = "Address Sent"
         print("Address Sent")
         is_address = True
-
-    elif "twitter" in data:
-        twitter = data["twitter"].lower()
-        response = "Twitter Sent"
-        print("Twitter Sent")
-        is_address = False
+    
 
     # Create a queue to store the search result
     result_queue = queue.Queue()
@@ -556,9 +611,9 @@ def get_transactions():
         thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
         thread.start()
     
-    else:
-        thread = threading.Thread(target=search_and_respond, args=(twitter, result_queue))
-        thread.start()
+    # else:
+    #     thread = threading.Thread(target=search_and_respond, args=(twitter, result_queue))
+    #     thread.start()
     response = result_queue.get()
 
     return jsonify(response), 200
