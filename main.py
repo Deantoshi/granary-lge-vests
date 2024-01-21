@@ -604,7 +604,6 @@ def search_and_respond_3(address, queue, quest_number):
         quest_number = -1
 
     df = gcs_updater.read_from_cloud_storage()
-    print(df)
 
     # df = pd.read_csv('user_transactions.csv')
 
@@ -628,19 +627,27 @@ def cooldown_handler():
 
     current_timestamp = time.time()
 
-    cooldown_df = pd.read_csv('cooldown.csv')
+    # cooldown_df = pd.read_csv('cooldown.csv')
+
+    # reads our google cloud storage bucket
+    cooldown_df = gcs_updater.read_from_cloud_storage('cooldown.csv')
 
     next_update = cooldown_df['next_update_timestamp'].iloc[0]
 
     if current_timestamp >= next_update:
-        datetime_obj = datetime.datetime.fromtimestamp(next_update)
+        datetime_obj = datetime.datetime.fromtimestamp(current_timestamp)
         fifteen_minutes_later = datetime_obj + datetime.timedelta(minutes=15)
 
         fifteen_minutes_later = int(fifteen_minutes_later.timestamp())
 
+        print(cooldown_df['next_update_timestamp'].iloc[0])
         cooldown_df['next_update_timestamp'] = fifteen_minutes_later
+        print(cooldown_df['next_update_timestamp'].iloc[0])
         
-        cooldown_df.to_csv('cooldown.csv')
+        # updates our cloud storage bucket csv
+        gcs_updater.df_write_to_cloud_storage(cooldown_df, 'cooldown.csv')
+
+        # cooldown_df.to_csv('cooldown.csv')
         # Print the original and adjusted timestamps
         # print("Original timestamp:", next_update)
         # print("Timestamp 15 minutes later:", fifteen_minutes_later)
@@ -649,7 +656,7 @@ def cooldown_handler():
 
     return current_timestamp
 
-# print(cooldown_handler())
+print(cooldown_handler())
 
 #reads from csv
 @app.route("/transactions/", methods=["POST"])
