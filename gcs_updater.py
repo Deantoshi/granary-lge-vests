@@ -71,10 +71,10 @@ def df_write_to_cloud_storage(df, filename):
     bucket = storage_client.get_bucket('yuzu_transactions')
 
     csv_string = df.to_csv(index=False)  # Omit index for cleaner output
-    print(csv_string)
+    # print(csv_string)
     blob = bucket.blob(filename)
-    blob.upload_from_filename(filename)
-    print('')
+    blob.upload_from_string(csv_string)
+    # print('')
 
     return
 
@@ -86,5 +86,5 @@ def df_write_to_cloud_storage(df, filename):
 
 # print(read_from_cloud_storage(filename))
 
-df = pd.read_csv('user_transactions.csv')
-df_write_to_cloud_storage(df, 'user_transactions.csv')
+# df = pd.read_csv('cooldown.csv')
+# df_write_to_cloud_storage(df, 'cooldown.csv')
