@@ -141,7 +141,7 @@ def make_user_data_csv(df):
         combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
 
         gcs_updater.df_write_to_cloud_storage(combined_df)
-        
+
         # combined_df.to_csv('all_users.csv', index=False)
         print('CSV Made')
     
@@ -343,7 +343,8 @@ def make_transaction_df(user_address_list, token_name_list, token_address_list, 
     
     # handles blank dataframes
     if len(user_address_list) < 1:
-        df = pd.read_csv('user_transactions.csv')
+        df = gcs_updater.read_from_cloud_storage('user_transactions.csv')
+        # df = pd.read_csv('user_transactions.csv')
         df['last_block_number'] = int(max(all_block_list))
 
     else:
