@@ -9,6 +9,7 @@ import queue
 import time
 import datetime
 from concurrent.futures import ThreadPoolExecutor
+import gcs_updater
 
 # # Borrow USDC tx: https://eon-explorer.horizenlabs.io/tx/0xa053e235cec7c46b7cc90c92d17abdaec1786b17230ed64835c2a76f2cf95acd
 # # Deposit USDC tx: https://eon-explorer.horizenlabs.io/tx/0xddcd860b32605a558e1e244ace4b970aab5b88c74449eb10e720b0d78af8253b
@@ -602,8 +603,10 @@ def search_and_respond_3(address, queue, quest_number):
     else:
         quest_number = -1
 
-    
-    df = pd.read_csv('user_transactions.csv')
+    df = gcs_updater.read_from_cloud_storage()
+    print(df)
+
+    # df = pd.read_csv('user_transactions.csv')
 
     df = df.loc[df['wallet_address'] == address]
     # df = df.loc[df[quest_column] == address]
@@ -646,7 +649,8 @@ def cooldown_handler():
 
     return current_timestamp
 
-print(cooldown_handler())
+# print(cooldown_handler())
+
 #reads from csv
 @app.route("/transactions/", methods=["POST"])
 def get_transactions():
