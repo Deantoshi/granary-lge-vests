@@ -25,14 +25,14 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
 # reads as the name implies
 def read_from_cloud_storage(input_filename):
     storage_client = storage.Client(PATH)
-    print(storage_client)
+    # print(storage_client)
 
     bucket = storage_client.get_bucket('yuzu_transactions')
 
-    print(bucket)
+    # print(bucket)
 
     filename = [filename.name for filename in list(bucket.list_blobs(prefix='')) ]
-    print(filename)
+    # print(filename)
 
     # download the csv file
     # blop = bucket.blob(blob_name = 'user_transactions.csv').download_as_string()
