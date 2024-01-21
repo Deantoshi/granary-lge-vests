@@ -23,7 +23,7 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
 #     return
 
 # reads as the name implies
-def read_from_cloud_storage():
+def read_from_cloud_storage(input_filename):
     storage_client = storage.Client(PATH)
     print(storage_client)
 
@@ -35,15 +35,21 @@ def read_from_cloud_storage():
     print(filename)
 
     # download the csv file
-    blop = bucket.blob(blob_name = 'user_transactions.csv').download_as_string()
+    # blop = bucket.blob(blob_name = 'user_transactions.csv').download_as_string()
 
-    with open ('user_transactions.csv', "wb") as f:
+    blop = bucket.blob(blob_name = input_filename).download_as_string()
+
+    with open (input_filename, "wb") as f:
         f.write(blop)
     
-    df = pd.read_csv('user_transactions.csv')
+    df = pd.read_csv(input_filename)
 
-    df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
+    if input_filename == 'usertransactions.csv':
+        df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
 
+    elif input_filename == 'cooldown.csv':
+        df = df[['next_update_timestamp']]
+        
     return df
 
 # takes in our filename and bucket and uploads our csv to our bucket
@@ -62,4 +68,6 @@ def write_to_cloud_storage(filename):
 # read_from_cloud_storage()
 
 filename = 'cooldown.csv'
-write_to_cloud_storage(filename)
+# write_to_cloud_storage(filename)
+
+print(read_from_cloud_storage(filename))
