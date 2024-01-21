@@ -130,19 +130,30 @@ def make_user_data_csv(df):
 
     if len(combined_df) >= len(old_df):
         combined_df['last_block_number'] = int(df['last_block_number'].max())
-        combined_df.to_csv('all_users.csv', index=False)
+        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
+        
+        gcs_updater.df_write_to_cloud_storage(combined_df)
+        # combined_df.to_csv('all_users.csv', index=False)
         print('CSV Made')
 
     elif len(combined_df) > 0:
         combined_df['last_block_number'] = int(df['last_block_number'].max())
-        combined_df.to_csv('all_users.csv', index=False)
+        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
+
+        gcs_updater.df_write_to_cloud_storage(combined_df)
+        
+        # combined_df.to_csv('all_users.csv', index=False)
         print('CSV Made')
     
     return
 
 # handles our csv writing
 def make_transactions_csv(df):
-    old_df = pd.read_csv('user_transactions.csv')
+
+    old_df = gcs_updater.read_from_cloud_storage('user_transactions.csv')
+
+    # old_df = pd.read_csv('user_transactions.csv')
+
     old_df = old_df.drop_duplicates(subset=['wallet_address','token_name','number_of_tokens','reserve_address','tx_hash','block_number'], keep='last')
 
     combined_df_list = [df, old_df]
@@ -153,24 +164,26 @@ def make_transactions_csv(df):
     combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
     combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
 
-    # print('df')
-    # print(df)
-    # print()
-    # print('old_df')
-    # print(old_df)
-    # print()
-    # print('combined_df')
-    # print(combined_df)
+    print('df')
+    print(df)
+    print()
+    print('old_df')
+    print(old_df)
+    print()
+    print('combined_df')
+    print(combined_df)
 
     if len(combined_df) >= len(old_df):
         combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
-        combined_df.to_csv('user_transactions.csv', index=False)
-        print('CSV Made')
+        gcs_updater.df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
+        # combined_df.to_csv('user_transactions.csv', index=False)
+        # print('CSV Made')
 
     elif len(combined_df) > 0:
         combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
-        combined_df.to_csv('user_transactions.csv', index=False)
-        print('CSV Made')
+        gcs_updater.df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
+        # combined_df.to_csv('user_transactions.csv', index=False)
+        # print('CSV Made')
     
     return
 
@@ -197,7 +210,7 @@ def get_yuzu_events(contract):
     latest_block = web3.eth.get_block('latest')
     latest_block = int(latest_block['number'])
 
-    from_block = latest_block - 5000
+    from_block = latest_block - 7500
 
     events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
     
@@ -634,15 +647,14 @@ def cooldown_handler():
 
     next_update = cooldown_df['next_update_timestamp'].iloc[0]
 
-    if current_timestamp >= next_update:
+    # if current_timestamp >= next_update:
+    if current_timestamp > 0:
         datetime_obj = datetime.datetime.fromtimestamp(current_timestamp)
         fifteen_minutes_later = datetime_obj + datetime.timedelta(minutes=15)
 
         fifteen_minutes_later = int(fifteen_minutes_later.timestamp())
 
-        print(cooldown_df['next_update_timestamp'].iloc[0])
         cooldown_df['next_update_timestamp'] = fifteen_minutes_later
-        print(cooldown_df['next_update_timestamp'].iloc[0])
         
         # updates our cloud storage bucket csv
         gcs_updater.df_write_to_cloud_storage(cooldown_df, 'cooldown.csv')
@@ -656,8 +668,8 @@ def cooldown_handler():
 
     return current_timestamp
 
-print(cooldown_handler())
-
+cooldown_handler()
+print('')
 #reads from csv
 @app.route("/transactions/", methods=["POST"])
 def get_transactions():
