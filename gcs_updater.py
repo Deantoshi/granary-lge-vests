@@ -49,7 +49,7 @@ def read_from_cloud_storage(input_filename):
 
     elif input_filename == 'cooldown.csv':
         df = df[['next_update_timestamp']]
-        
+
     return df
 
 # takes in our filename and bucket and uploads our csv to our bucket
@@ -65,9 +65,26 @@ def write_to_cloud_storage(filename):
 
     return
 
+def df_write_to_cloud_storage(df, filename):
+
+    storage_client = storage.Client(PATH)
+    bucket = storage_client.get_bucket('yuzu_transactions')
+
+    csv_string = df.to_csv(index=False)  # Omit index for cleaner output
+    print(csv_string)
+    blob = bucket.blob(filename)
+    blob.upload_from_filename(filename)
+    print('')
+
+    return
+
 # read_from_cloud_storage()
 
-filename = 'cooldown.csv'
+# filename = 'cooldown.csv'
+# filename = 'user_transactions.csv'
 # write_to_cloud_storage(filename)
 
-print(read_from_cloud_storage(filename))
+# print(read_from_cloud_storage(filename))
+
+df = pd.read_csv('user_transactions.csv')
+df_write_to_cloud_storage(df, 'user_transactions.csv')
