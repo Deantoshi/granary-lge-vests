@@ -47,8 +47,8 @@ def read_from_cloud_storage():
     return df
 
 # takes in our filename and bucket and uploads our csv to our bucket
-def write_to_cloud_storage():
-    filename = 'user_transactions.csv'
+def write_to_cloud_storage(filename):
+    # filename = 'user_transactions.csv'
     uploadfile = os.path.join(os.getcwd(), filename)
 
     storage_client = storage.Client(PATH)
@@ -61,4 +61,5 @@ def write_to_cloud_storage():
 
 # read_from_cloud_storage()
 
-write_to_cloud_storage()
+filename = 'cooldown.csv'
+write_to_cloud_storage(filename)
