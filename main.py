@@ -45,36 +45,6 @@ PATH = os.path.join(os.getcwd(), 'yuzu-api-01-dae6611de7aa.json')
 # os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
 STORAGE_CLIENT = storage.Client(PATH)
 
-# reads as the name implies
-# def read_from_cloud_storage(input_filename):
-#     # storage_client = storage.Client(PATH)
-#     # print(storage_client)
-
-#     bucket = STORAGE_CLIENT.get_bucket('yuzu_transactions')
-
-#     # print(bucket)
-
-#     filename = [filename.name for filename in list(bucket.list_blobs(prefix='')) ]
-#     # print(filename)
-
-#     # download the csv file
-#     # blop = bucket.blob(blob_name = 'user_transactions.csv').download_as_string()
-
-#     blop = bucket.blob(blob_name = input_filename).download_as_string()
-
-#     with open (input_filename, "wb") as f:
-#         f.write(blop)
-    
-#     df = pd.read_csv(input_filename)
-
-#     if input_filename == 'usertransactions.csv':
-#         df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
-
-#     elif input_filename == 'cooldown.csv':
-#         df = df[['next_update_timestamp']]
-
-#     return df
-
 def read_from_cloud_storage(filename):
     storage_client = storage.Client(PATH)
     bucket = storage_client.get_bucket('yuzu_transactions')
@@ -85,6 +55,9 @@ def read_from_cloud_storage(filename):
               ) ,
                  encoding='UTF-8',
                  sep=',')
+    
+    df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'next_update_timestamp']]
+
     return df
 
 def df_write_to_cloud_storage(df, filename):
@@ -227,14 +200,14 @@ def make_transactions_csv(df):
     combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
     combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
 
-    print('df')
-    print(df)
-    print()
-    print('old_df')
-    print(old_df)
-    print()
-    print('combined_df')
-    print(combined_df)
+    # print('df')
+    # print(df)
+    # print()
+    # print('old_df')
+    # print(old_df)
+    # print()
+    # print('combined_df')
+    # print(combined_df)
 
     if len(combined_df) >= len(old_df):
         combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
@@ -662,10 +635,6 @@ def search_and_respond_2(address, queue):
 
 # reads from csv and makes our relevant df
 def search_and_respond_3(address, queue, quest_number):
-    
-    # # will check to see if our data csvs need to be updated
-    # # based off a 15 minute interval currently
-    cooldown_handler()
 
     # # default quest
     quest_column = 'q_made_transaction'
@@ -685,11 +654,15 @@ def search_and_respond_3(address, queue, quest_number):
         quest_number = -1
 
     df = read_from_cloud_storage('user_transactions.csv')
-
+    
     # df = pd.read_csv('user_transactions.csv')
 
     df = df.loc[df['wallet_address'] == address]
     # df = df.loc[df[quest_column] == address]
+    
+    # # will check to see if our data csvs need to be updated
+    # # based off a 15 minute interval currently
+    cooldown_handler(df)
 
     # # number to track whether the user completed the quest or not
     # # if we don't have a record for the user, we will assume they haven't completed the quest
@@ -704,14 +677,14 @@ def search_and_respond_3(address, queue, quest_number):
 
 # # will update our user_transactions.csv periodically
 # # updates if 15 minutes has passed since the last update
-def cooldown_handler():
+def cooldown_handler(df):
 
     current_timestamp = time.time()
 
     # cooldown_df = pd.read_csv('cooldown.csv')
 
     # reads our google cloud storage bucket
-    cooldown_df = read_from_cloud_storage('cooldown.csv')
+    cooldown_df = df
 
     next_update = cooldown_df['next_update_timestamp'].iloc[0]
 
@@ -726,7 +699,7 @@ def cooldown_handler():
         cooldown_df['next_update_timestamp'] = fifteen_minutes_later
         
         # updates our cloud storage bucket csv
-        df_write_to_cloud_storage(cooldown_df, 'cooldown.csv')
+        df_write_to_cloud_storage(cooldown_df, 'user_transactions.csv')
 
         # cooldown_df.to_csv('cooldown.csv')
         # Print the original and adjusted timestamps
@@ -740,6 +713,11 @@ def cooldown_handler():
 
 # cooldown_handler()
 # print('')
+# df = pd.read_csv('user_transactions.csv')
+# df_write_to_cloud_storage(df, 'user_transactions.csv')
+
+# print()
+
 #reads from csv
 @app.route("/transactions/", methods=["POST"])
 def get_transactions():
