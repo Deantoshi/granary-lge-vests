@@ -9,7 +9,12 @@ import queue
 import time
 import datetime
 from concurrent.futures import ThreadPoolExecutor
-import gcs_updater
+# import gcs_updater
+from google.cloud import storage
+import google.cloud.storage
+import os
+import sys
+
 
 # # Borrow USDC tx: https://eon-explorer.horizenlabs.io/tx/0xa053e235cec7c46b7cc90c92d17abdaec1786b17230ed64835c2a76f2cf95acd
 # # Deposit USDC tx: https://eon-explorer.horizenlabs.io/tx/0xddcd860b32605a558e1e244ace4b970aab5b88c74449eb10e720b0d78af8253b
@@ -34,8 +39,54 @@ LATEST_BLOCK = 951714 + 1
 FROM_BLOCK = 951714
 # FROM_BLOCK = 0
 
+PATH = os.path.join(os.getcwd(), 'yuzu-api-01-50ed5aff527c.json')
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
+
 # Replace with the actual Aave V2 contract address
 # contract_address = "0x871AfF0013bE6218B61b28b274a6F53DB131795F"
+
+# reads as the name implies
+def read_from_cloud_storage(input_filename):
+    storage_client = storage.Client(PATH)
+    # print(storage_client)
+
+    bucket = storage_client.get_bucket('yuzu_transactions')
+
+    # print(bucket)
+
+    filename = [filename.name for filename in list(bucket.list_blobs(prefix='')) ]
+    # print(filename)
+
+    # download the csv file
+    # blop = bucket.blob(blob_name = 'user_transactions.csv').download_as_string()
+
+    blop = bucket.blob(blob_name = input_filename).download_as_string()
+
+    with open (input_filename, "wb") as f:
+        f.write(blop)
+    
+    df = pd.read_csv(input_filename)
+
+    if input_filename == 'usertransactions.csv':
+        df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
+
+    elif input_filename == 'cooldown.csv':
+        df = df[['next_update_timestamp']]
+
+    return df
+
+def df_write_to_cloud_storage(df, filename):
+
+    storage_client = storage.Client(PATH)
+    bucket = storage_client.get_bucket('yuzu_transactions')
+
+    csv_string = df.to_csv(index=False)  # Omit index for cleaner output
+    # print(csv_string)
+    blob = bucket.blob(filename)
+    blob.upload_from_string(csv_string)
+    # print('')
+
+    return
 
 
 # returns basic data about our reserves in a dataframe
@@ -132,7 +183,7 @@ def make_user_data_csv(df):
         combined_df['last_block_number'] = int(df['last_block_number'].max())
         combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
         
-        gcs_updater.df_write_to_cloud_storage(combined_df)
+        df_write_to_cloud_storage(combined_df)
         # combined_df.to_csv('all_users.csv', index=False)
         print('CSV Made')
 
@@ -140,7 +191,7 @@ def make_user_data_csv(df):
         combined_df['last_block_number'] = int(df['last_block_number'].max())
         combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
 
-        gcs_updater.df_write_to_cloud_storage(combined_df)
+        df_write_to_cloud_storage(combined_df)
 
         # combined_df.to_csv('all_users.csv', index=False)
         print('CSV Made')
@@ -150,7 +201,7 @@ def make_user_data_csv(df):
 # handles our csv writing
 def make_transactions_csv(df):
 
-    old_df = gcs_updater.read_from_cloud_storage('user_transactions.csv')
+    old_df = read_from_cloud_storage('user_transactions.csv')
 
     # old_df = pd.read_csv('user_transactions.csv')
 
@@ -175,13 +226,13 @@ def make_transactions_csv(df):
 
     if len(combined_df) >= len(old_df):
         combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
-        gcs_updater.df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
+        df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
         # combined_df.to_csv('user_transactions.csv', index=False)
         # print('CSV Made')
 
     elif len(combined_df) > 0:
         combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
-        gcs_updater.df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
+        df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
         # combined_df.to_csv('user_transactions.csv', index=False)
         # print('CSV Made')
     
@@ -343,7 +394,7 @@ def make_transaction_df(user_address_list, token_name_list, token_address_list, 
     
     # handles blank dataframes
     if len(user_address_list) < 1:
-        df = gcs_updater.read_from_cloud_storage('user_transactions.csv')
+        df = read_from_cloud_storage('user_transactions.csv')
         # df = pd.read_csv('user_transactions.csv')
         df['last_block_number'] = int(max(all_block_list))
 
@@ -600,6 +651,10 @@ def search_and_respond_2(address, queue):
 # reads from csv and makes our relevant df
 def search_and_respond_3(address, queue, quest_number):
     
+    # # will check to see if our data csvs need to be updated
+    # # based off a 15 minute interval currently
+    cooldown_handler()
+
     # # default quest
     quest_column = 'q_made_transaction'
     
@@ -617,7 +672,7 @@ def search_and_respond_3(address, queue, quest_number):
     else:
         quest_number = -1
 
-    df = gcs_updater.read_from_cloud_storage()
+    df = read_from_cloud_storage('user_transactions.csv')
 
     # df = pd.read_csv('user_transactions.csv')
 
@@ -644,12 +699,13 @@ def cooldown_handler():
     # cooldown_df = pd.read_csv('cooldown.csv')
 
     # reads our google cloud storage bucket
-    cooldown_df = gcs_updater.read_from_cloud_storage('cooldown.csv')
+    cooldown_df = read_from_cloud_storage('cooldown.csv')
 
     next_update = cooldown_df['next_update_timestamp'].iloc[0]
 
-    # if current_timestamp >= next_update:
-    if current_timestamp > 0:
+    if current_timestamp >= next_update:
+        print('updating csvs')
+    # if current_timestamp > 0:
         datetime_obj = datetime.datetime.fromtimestamp(current_timestamp)
         fifteen_minutes_later = datetime_obj + datetime.timedelta(minutes=15)
 
@@ -658,7 +714,7 @@ def cooldown_handler():
         cooldown_df['next_update_timestamp'] = fifteen_minutes_later
         
         # updates our cloud storage bucket csv
-        gcs_updater.df_write_to_cloud_storage(cooldown_df, 'cooldown.csv')
+        df_write_to_cloud_storage(cooldown_df, 'cooldown.csv')
 
         # cooldown_df.to_csv('cooldown.csv')
         # Print the original and adjusted timestamps
@@ -666,11 +722,12 @@ def cooldown_handler():
         # print("Timestamp 15 minutes later:", fifteen_minutes_later)
 
         find_all_transactions()
-
+    else:
+        print('no update needed yet')
     return current_timestamp
 
-cooldown_handler()
-print('')
+# cooldown_handler()
+# print('')
 #reads from csv
 @app.route("/transactions/", methods=["POST"])
 def get_transactions():
