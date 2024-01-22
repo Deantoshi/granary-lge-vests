@@ -1,3 +1,6 @@
+env_variables:
+  GOOGLE_APPLICATION_CREDENTIALS: "yuzu-api-01-dae6611de7aa.json"
+
 runtime: python311
 
 instance_class: F4
