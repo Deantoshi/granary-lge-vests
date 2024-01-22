@@ -14,6 +14,8 @@ from google.cloud import storage
 import google.cloud.storage
 import os
 import sys
+import io
+from io import BytesIO
 
 
 # # Borrow USDC tx: https://eon-explorer.horizenlabs.io/tx/0xa053e235cec7c46b7cc90c92d17abdaec1786b17230ed64835c2a76f2cf95acd
@@ -39,46 +41,56 @@ LATEST_BLOCK = 951714 + 1
 FROM_BLOCK = 951714
 # FROM_BLOCK = 0
 
-PATH = os.path.join(os.getcwd(), 'yuzu-api-01-50ed5aff527c.json')
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
-
-# Replace with the actual Aave V2 contract address
-# contract_address = "0x871AfF0013bE6218B61b28b274a6F53DB131795F"
+PATH = os.path.join(os.getcwd(), 'yuzu-api-01-dae6611de7aa.json')
+# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
+STORAGE_CLIENT = storage.Client(PATH)
 
 # reads as the name implies
-def read_from_cloud_storage(input_filename):
-    storage_client = storage.Client(PATH)
-    # print(storage_client)
+# def read_from_cloud_storage(input_filename):
+#     # storage_client = storage.Client(PATH)
+#     # print(storage_client)
 
+#     bucket = STORAGE_CLIENT.get_bucket('yuzu_transactions')
+
+#     # print(bucket)
+
+#     filename = [filename.name for filename in list(bucket.list_blobs(prefix='')) ]
+#     # print(filename)
+
+#     # download the csv file
+#     # blop = bucket.blob(blob_name = 'user_transactions.csv').download_as_string()
+
+#     blop = bucket.blob(blob_name = input_filename).download_as_string()
+
+#     with open (input_filename, "wb") as f:
+#         f.write(blop)
+    
+#     df = pd.read_csv(input_filename)
+
+#     if input_filename == 'usertransactions.csv':
+#         df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
+
+#     elif input_filename == 'cooldown.csv':
+#         df = df[['next_update_timestamp']]
+
+#     return df
+
+def read_from_cloud_storage(filename):
+    storage_client = storage.Client(PATH)
     bucket = storage_client.get_bucket('yuzu_transactions')
 
-    # print(bucket)
-
-    filename = [filename.name for filename in list(bucket.list_blobs(prefix='')) ]
-    # print(filename)
-
-    # download the csv file
-    # blop = bucket.blob(blob_name = 'user_transactions.csv').download_as_string()
-
-    blop = bucket.blob(blob_name = input_filename).download_as_string()
-
-    with open (input_filename, "wb") as f:
-        f.write(blop)
-    
-    df = pd.read_csv(input_filename)
-
-    if input_filename == 'usertransactions.csv':
-        df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
-
-    elif input_filename == 'cooldown.csv':
-        df = df[['next_update_timestamp']]
-
+    df = pd.read_csv(
+    io.BytesIO(
+                 bucket.blob(blob_name = filename).download_as_string() 
+              ) ,
+                 encoding='UTF-8',
+                 sep=',')
     return df
 
 def df_write_to_cloud_storage(df, filename):
 
-    storage_client = storage.Client(PATH)
-    bucket = storage_client.get_bucket('yuzu_transactions')
+    # storage_client = storage.Client(PATH)
+    bucket = STORAGE_CLIENT.get_bucket('yuzu_transactions')
 
     csv_string = df.to_csv(index=False)  # Omit index for cleaner output
     # print(csv_string)
