@@ -4,8 +4,11 @@ import google.cloud.storage
 import json
 import os
 import sys
+import io
+from io import BytesIO
 
-PATH = os.path.join(os.getcwd(), 'yuzu-api-01-50ed5aff527c.json')
+
+PATH = os.path.join(os.getcwd(), 'yuzu-api-01-dae6611de7aa.json')
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
 
 # # writes to our cloud storage object
@@ -44,12 +47,25 @@ def read_from_cloud_storage(input_filename):
     
     df = pd.read_csv(input_filename)
 
-    if input_filename == 'usertransactions.csv':
+    if input_filename == 'user_transactions.csv':
         df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
 
     elif input_filename == 'cooldown.csv':
         df = df[['next_update_timestamp']]
 
+    return df
+
+
+def read_from_cloud_storage_2():
+    storage_client = storage.Client(PATH)
+    bucket = storage_client.get_bucket('yuzu_transactions')
+
+    df = pd.read_csv(
+    io.BytesIO(
+                 bucket.blob(blob_name = 'user_transactions.csv').download_as_string() 
+              ) ,
+                 encoding='UTF-8',
+                 sep=',')
     return df
 
 # takes in our filename and bucket and uploads our csv to our bucket
@@ -88,3 +104,6 @@ def df_write_to_cloud_storage(df, filename):
 
 # df = pd.read_csv('cooldown.csv')
 # df_write_to_cloud_storage(df, 'cooldown.csv')
+
+df = read_from_cloud_storage_2()
+print(df)
