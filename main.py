@@ -677,6 +677,10 @@ def search_and_respond_3(address, queue, quest_number):
 def cooldown_handler():
 
     df = read_from_cloud_storage('user_transactions.csv')
+    print('Read Timestamp: ', df['next_update_timestamp'].iloc[0])
+    
+    df['next_update_timestamp'] = df['next_update_timestamp'].fillna(0)
+
     current_timestamp = time.time()
 
     # cooldown_df = pd.read_csv('cooldown.csv')
@@ -760,6 +764,8 @@ def balance_of(address):
     # # will check to see if our data csvs need to be updated
     # # based off a 15 minute interval currently
     # cooldown_handler(df)
+
+    # cooldown_handler()
 
     # Create a queue to store the search result
     result_queue = queue.Queue()
