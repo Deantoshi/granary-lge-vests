@@ -660,9 +660,6 @@ def search_and_respond_3(address, queue, quest_number):
     df = df.loc[df['wallet_address'] == address]
     # df = df.loc[df[quest_column] == address]
     
-    # # will check to see if our data csvs need to be updated
-    # # based off a 15 minute interval currently
-    cooldown_handler(df)
 
     # # number to track whether the user completed the quest or not
     # # if we don't have a record for the user, we will assume they haven't completed the quest
@@ -677,8 +674,9 @@ def search_and_respond_3(address, queue, quest_number):
 
 # # will update our user_transactions.csv periodically
 # # updates if 15 minutes has passed since the last update
-def cooldown_handler(df):
+def cooldown_handler():
 
+    df = read_from_cloud_storage('user_transactions.csv')
     current_timestamp = time.time()
 
     # cooldown_df = pd.read_csv('cooldown.csv')
@@ -750,6 +748,35 @@ def get_transactions():
     #     thread = threading.Thread(target=search_and_respond, args=(twitter, result_queue))
     #     thread.start()
     response = result_queue.get()
+
+    return jsonify(response), 200
+
+# simple endpoint that will see if our csvs need updates
+@app.route("/test/<address>", methods=["GET"])
+def balance_of(address):
+    
+    # df = read_from_cloud_storage('user_transactions.csv')
+
+    # # will check to see if our data csvs need to be updated
+    # # based off a 15 minute interval currently
+    # cooldown_handler(df)
+
+    # Create a queue to store the search result
+    result_queue = queue.Queue()
+
+    thread = threading.Thread(target=cooldown_handler)
+    thread.start()
+    
+    response = {
+        "error": {
+            "code": 0,
+            "message": "success"
+        },
+        "data": {
+            "result": "completed"
+        }
+    }
+    # response = result_queue.get()
 
     return jsonify(response), 200
 
