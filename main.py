@@ -45,6 +45,7 @@ PATH = os.path.join(os.getcwd(), 'yuzu-api-01-dae6611de7aa.json')
 # os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
 STORAGE_CLIENT = storage.Client(PATH)
 
+@cache
 def read_from_cloud_storage(filename):
     storage_client = storage.Client(PATH)
     bucket = storage_client.get_bucket('yuzu_transactions')
@@ -127,7 +128,7 @@ def get_reserve_data():
     # return decimals
 
 #gets our web3 contract object
-# @cache
+@cache
 def get_contract():
     contract_address = "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE"
     contract_abi = [{"type":"constructor","stateMutability":"nonpayable","inputs":[{"type":"address","name":"weth","internalType":"address"},{"type":"address","name":"provider","internalType":"address"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"type":"address","name":"previousOwner","internalType":"address","indexed":True},{"type":"address","name":"newOwner","internalType":"address","indexed":True}],"anonymous":False},{"type":"fallback","stateMutability":"payable"},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"authorizeLendingPool","inputs":[{"type":"address","name":"lendingPool","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"borrowETH","inputs":[{"type":"address","name":"lendingPool","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"interesRateMode","internalType":"uint256"},{"type":"uint16","name":"referralCode","internalType":"uint16"}]},{"type":"function","stateMutability":"payable","outputs":[],"name":"depositETH","inputs":[{"type":"address","name":"lendingPool","internalType":"address"},{"type":"address","name":"onBehalfOf","internalType":"address"},{"type":"uint16","name":"referralCode","internalType":"uint16"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"emergencyEtherTransfer","inputs":[{"type":"address","name":"to","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"emergencyTokenTransfer","inputs":[{"type":"address","name":"token","internalType":"address"},{"type":"address","name":"to","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"string","name":"","internalType":"string"}],"name":"getSignature","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"address"}],"name":"getWETHAddress","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"address"}],"name":"owner","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"renounceOwnership","inputs":[]},{"type":"function","stateMutability":"payable","outputs":[],"name":"repayETH","inputs":[{"type":"address","name":"lendingPool","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"rateMode","internalType":"uint256"},{"type":"address","name":"onBehalfOf","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"setSignature","inputs":[{"type":"string","name":"signature","internalType":"string"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"transferOwnership","inputs":[{"type":"address","name":"newOwner","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"withdrawETH","inputs":[{"type":"address","name":"lendingPool","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"address","name":"to","internalType":"address"}]},{"type":"receive","stateMutability":"payable"}]
@@ -566,10 +567,10 @@ def make_api_response_string(df):
 
     # Create JSON response
     response = {
-        "error": {
-            "code": 0,
-            "message": "success"
-        },
+        # "error": {
+        #     "code": 0,
+        #     "message": "success"
+        # },
         "data": {
             "result": quest_complete
         }
@@ -600,10 +601,10 @@ def make_api_response_string_2(df, quest_completed_number):
 
     # Create JSON response
     response = {
-        "error": {
-            "code": 0,
-            "message": "success"
-        },
+        # "error": {
+        #     "code": 0,
+        #     "message": "success"
+        # },
         "data": {
             "result": quest_complete
         }
@@ -774,10 +775,10 @@ def balance_of(address):
     thread.start()
     
     response = {
-        "error": {
-            "code": 0,
-            "message": "success"
-        },
+        # "error": {
+        #     "code": 0,
+        #     "message": "success"
+        # },
         "data": {
             "result": "completed"
         }
