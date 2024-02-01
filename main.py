@@ -415,7 +415,7 @@ def find_5_quests(df):
     df = user_deposited_001_wbtc(df)
     df = user_borrowed_25_usdc(df)
     df = user_borrowed_02_weth(df)
-    df = user_borrowed_anything(df)
+    df = user_borrowed_anything()
 
     return df
 
@@ -472,7 +472,7 @@ def get_transaction_data(events, reserve_df):
             temp_df = reserve_df.loc[reserve_df['reserve_address'] == token_address]
 
             # get whole numbers of our token amount
-            token_amount = round(token_amount / temp_df['reserve_decimal'].iloc[0], 5)
+            token_amount = round(token_amount / temp_df['reserve_decimal'].iloc[0], 18)
             token_name = temp_df['reserve_name'].iloc[0]
             block_number = int(event['blockNumber'])
 
@@ -494,8 +494,8 @@ def get_transaction_data(events, reserve_df):
 
     df = make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list)
 
-    print(df)
     df = find_5_quests(df)
+    print(df)
     # # makes our dataframe
     make_transactions_csv(df)
     
@@ -525,6 +525,7 @@ def find_all_transactions():
             contract = get_v_token_contract(reserve_address)
 
         events = get_yuzu_events(contract)
+        
         try:
             df = get_transaction_data(events, reserve_df)
         except:
