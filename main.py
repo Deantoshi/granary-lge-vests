@@ -756,6 +756,82 @@ def get_transactions():
 
     return jsonify(response), 200
 
+# will be used to get our quest specific data
+# returns a response
+def get_quest_response(quest_number):
+
+    data = json.loads(request.data)  # Parse JSON string into JSON object
+
+    print(data)
+
+    #used to help determine if we received an address or a twitter profile
+    is_address = True
+
+    if "address" in data:
+        address = data["address"].lower()
+        response = "Address Sent"
+        print("Address Sent")
+        is_address = True
+
+
+    # Create a queue to store the search result
+    result_queue = queue.Queue()
+
+    # search_and_respond_2(address, result_queue)
+    if is_address == True:
+        # thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
+        thread = threading.Thread(target=search_and_respond_3, args=(address, result_queue, quest_number))
+        thread.start()
+
+    response = result_queue.get()
+
+    return response
+
+#reads from csv for quest0
+@app.route("/quest0/", methods=["POST"])
+def get_quest_0():
+
+    quest_number = 0
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest1
+@app.route("/quest1/", methods=["POST"])
+def get_quest_1():
+
+    quest_number = 1
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest2
+@app.route("/quest2/", methods=["POST"])
+def get_quest_2():
+
+    quest_number = 2
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest3
+@app.route("/quest3/", methods=["POST"])
+def get_quest_3():
+
+    quest_number = 3
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest3
+@app.route("/quest4/", methods=["POST"])
+def get_quest_4():
+
+    quest_number = 4
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
 # simple endpoint that will see if our csvs need updates
 @app.route("/test/<address>", methods=["GET"])
 def balance_of(address):
