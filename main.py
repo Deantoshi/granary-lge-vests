@@ -57,7 +57,13 @@ def read_from_cloud_storage(filename):
                  encoding='UTF-8',
                  sep=',')
     
-    df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'next_update_timestamp']]
+    # try to read user_borrowed column and if doesn't exist make it and set it to 0
+    try:
+        df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'next_update_timestamp', 'user_borrowed']]
+    except:
+        df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'next_update_timestamp']]
+        df['user_borrowed'] = df['q_made_transaction']
+        df['user_borrowed'] = 0
 
     return df
 
@@ -167,7 +173,7 @@ def make_user_data_csv(df):
 
     if len(combined_df) >= len(old_df):
         combined_df['last_block_number'] = int(df['last_block_number'].max())
-        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
+        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'user_borrowed']]
         
         df_write_to_cloud_storage(combined_df)
         # combined_df.to_csv('all_users.csv', index=False)
@@ -175,7 +181,7 @@ def make_user_data_csv(df):
 
     elif len(combined_df) > 0:
         combined_df['last_block_number'] = int(df['last_block_number'].max())
-        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed']]
+        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'user_borrowed']]
 
         df_write_to_cloud_storage(combined_df)
 
@@ -364,14 +370,52 @@ def user_borrowed_02_weth(df):
 
     return df
 
+#finds if our users have borrowed anything
+def user_borrowed_anything():
+
+    df = read_from_cloud_storage('user_transactions.csv')
+
+    reserve_address_list = ['0x1d6492faacb1ea15641dd94fb9ab020056abbc94', '0x3f8f2929a2a461d4b59575f132016348cf526f25', '0xbe8afe7e442ffffe576b979d490c5adb7823c3c6', '0x6c29836be0dcd891c1c4ca77ff8f3a29e4a3fa5e']
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    minimum_tokens = 0.000000000000000001
+
+    quest_name = 'user_borrowed'
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = 0
+        found_a_borrow = False
+        for reserve_address in reserve_address_list:
+            is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+            if is_completed == 1:
+                found_a_borrow = True
+
+        if found_a_borrow == True:
+            completed_list.append(1)
+        
+        else:
+            completed_list.append(0)
+
+    
+    df[quest_name] = completed_list
+
+    return df
+
+
+    
+
 # # aggregate function to find the results of all of our quests
 # # returns a dataframe
-def find_4_quests(df):
+def find_5_quests(df):
 
     df = user_deposited_10_zen(df)
     df = user_deposited_001_wbtc(df)
     df = user_borrowed_25_usdc(df)
     df = user_borrowed_02_weth(df)
+    df = user_borrowed_anything(df)
 
     return df
 
@@ -450,7 +494,8 @@ def get_transaction_data(events, reserve_df):
 
     df = make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list)
 
-    df = find_4_quests(df)
+    print(df)
+    df = find_5_quests(df)
     # # makes our dataframe
     make_transactions_csv(df)
     
@@ -650,6 +695,8 @@ def search_and_respond_3(address, queue, quest_number):
         quest_column = '25_usdc_borrowed'
     elif quest_number == 4:
         quest_column = '02_weth_borrowed'
+    elif quest_number == 5:
+        quest_column = 'user_borrowed'
 
     else:
         quest_number = -1
@@ -823,11 +870,20 @@ def get_quest_3():
     
     return jsonify(response), 200
 
-#reads from csv for quest3
+#reads from csv for quest4
 @app.route("/quest4/", methods=["POST"])
 def get_quest_4():
 
     quest_number = 4
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest5
+@app.route("/quest5/", methods=["POST"])
+def get_quest_5():
+
+    quest_number = 5
     response = get_quest_response(quest_number)
     
     return jsonify(response), 200
@@ -865,6 +921,15 @@ def balance_of(address):
 
 if __name__ == "__main__":
     app.run()
+
+
+# # updates our google cloud csv with our missing column
+# df = read_from_cloud_storage('user_transactions.csv')
+
+# df['user_borrowed'] = df['q_made_transaction']
+# df['user_borrowed'] = 0
+
+# df_write_to_cloud_storage(df, 'user_transactions.csv')
 
 # get_all_gateway_transactions()
 # df = find_all_transactions()
