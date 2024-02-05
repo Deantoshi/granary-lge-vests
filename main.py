@@ -168,7 +168,9 @@ def make_user_data_csv(df):
     combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
     combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
 
-    # print(df)
+    # print('df', df)
+    # print('old_df', old_df)
+    # print('combined_df', combined_df)
     # print(len(old_df), len(df), len(combined_df))
 
     if len(combined_df) >= len(old_df):
@@ -207,17 +209,24 @@ def make_transactions_csv(df):
     combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
     combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
 
-    # print('df')
-    # print(df)
-    # print()
-    # print('old_df')
-    # print(old_df)
-    # print()
-    # print('combined_df')
-    # print(combined_df)
+    temp_df = df.loc[df['wallet_address'] == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower()]
+    temp_df = temp_df.loc[temp_df['token_name'] == 'v_usdc']
+
+    if len(temp_df) > 1:
+        print('df')
+        print(df)
+        print(df.dtypes)
+        print()
+        print('old_df')
+        print(old_df)
+        print(old_df.dtypes)
+        print('combined_df')
+        print(combined_df)
+        print(combined_df.dtypes)
 
     if len(combined_df) >= len(old_df):
         combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
+        combined_df['next_update_timestamp'] = int(combined_df['next_update_timestamp'].max())
         df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
         # combined_df.to_csv('user_transactions.csv', index=False)
         # print('CSV Made')
@@ -371,9 +380,11 @@ def user_borrowed_02_weth(df):
     return df
 
 #finds if our users have borrowed anything
-def user_borrowed_anything():
+def user_borrowed_anything(df):
 
-    df = read_from_cloud_storage('user_transactions.csv')
+    print('User Borrowed Df before updates')
+    print(df)
+    # df = read_from_cloud_storage('user_transactions.csv')
 
     reserve_address_list = ['0x1d6492faacb1ea15641dd94fb9ab020056abbc94', '0x3f8f2929a2a461d4b59575f132016348cf526f25', '0xbe8afe7e442ffffe576b979d490c5adb7823c3c6', '0x6c29836be0dcd891c1c4ca77ff8f3a29e4a3fa5e']
 
@@ -402,6 +413,9 @@ def user_borrowed_anything():
     
     df[quest_name] = completed_list
 
+    print('User Borrowed Df after updates')
+    print(df)
+
     return df
 
 
@@ -411,11 +425,14 @@ def user_borrowed_anything():
 # # returns a dataframe
 def find_5_quests(df):
 
+    print('Before 5 Quests Df')
+    print(df)
+
     df = user_deposited_10_zen(df)
     df = user_deposited_001_wbtc(df)
     df = user_borrowed_25_usdc(df)
     df = user_borrowed_02_weth(df)
-    df = user_borrowed_anything()
+    df = user_borrowed_anything(df)
 
     return df
 
@@ -464,9 +481,13 @@ def get_transaction_data(events, reserve_df):
     for event in events:
         tx_from = event['args']['from'].lower()
         tx_to = event['args']['to'].lower()
+
+        if tx_to == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower() or tx_from == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower():
+            print('found you')
         # print(event)
 
-        if (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()) and (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x54F7D603881d850A83ec29e2A1DD61e4D0b8D58A".lower()):
+        # if (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()) and (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x54F7D603881d850A83ec29e2A1DD61e4D0b8D58A".lower()):
+        if len(tx_from) == 42 and len(tx_to) == 42:
             token_address = event['address'].lower()
             token_amount = event['args']['value']
             temp_df = reserve_df.loc[reserve_df['reserve_address'] == token_address]
@@ -486,6 +507,10 @@ def get_transaction_data(events, reserve_df):
 
             tx_hash_list.append(event['transactionHash'].hex().lower())
 
+            if event['transactionHash'].hex().lower() == '0x2dbc3745eba9acf0f552ddfd8cbd9a0c2b9e85222ac22bb5caf475d7cb4caad2' and token_name == 'v_usdc':
+                print(event)
+                print('wowowowow')
+
             made_transaction_list.append(int(1))
         
         elif tx_from == "0x0000000000000000000000000000000000000000" and tx_to == "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
@@ -493,6 +518,8 @@ def get_transaction_data(events, reserve_df):
             print(event)
 
     df = make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list)
+    print('Transaction DF')
+    print(df[['wallet_address', 'token_name', 'number_of_tokens', 'tx_hash']])
 
     df = find_5_quests(df)
     print(df)
@@ -738,6 +765,9 @@ def cooldown_handler():
     cooldown_df = df
 
     next_update = cooldown_df['next_update_timestamp'].iloc[0]
+
+    #change me
+    next_update = 0
 
     if current_timestamp >= next_update:
         print('updating csvs')
