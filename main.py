@@ -45,7 +45,7 @@ PATH = os.path.join(os.getcwd(), 'yuzu-api-01-dae6611de7aa.json')
 # os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
 STORAGE_CLIENT = storage.Client(PATH)
 
-@cache
+# @cache
 def read_from_cloud_storage(filename):
     storage_client = storage.Client(PATH)
     bucket = storage_client.get_bucket('yuzu_transactions')
@@ -231,9 +231,9 @@ def make_transactions_csv(df):
         # combined_df.to_csv('user_transactions.csv', index=False)
         # print('CSV Made')
 
-    elif len(combined_df) > 0:
-        combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
-        df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
+    # elif len(combined_df) > 0:
+    #     combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
+    #     df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
         # combined_df.to_csv('user_transactions.csv', index=False)
         # print('CSV Made')
     
