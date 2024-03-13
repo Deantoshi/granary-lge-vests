@@ -30,7 +30,7 @@ from io import BytesIO
 app = Flask(__name__)
 
 # Replace with the actual Optimism RPC URL
-optimism_rpc_url = 'https://eon-rpc.horizenlabs.io/ethv1'
+optimism_rpc_url = 'https://linea.blockpi.network/v1/rpc/public'
 
 # Create a Web3 instance to connect to the Optimism blockchain
 web3 = Web3(Web3.HTTPProvider(optimism_rpc_url))
@@ -38,58 +38,21 @@ web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
 # LATEST_BLOCK = web3.eth.get_block_number()
 LATEST_BLOCK = 951714 + 1
-FROM_BLOCK = 951714
+#Lending pool founding block
+FROM_BLOCK = 758632
 # FROM_BLOCK = 0
-
-PATH = os.path.join(os.getcwd(), 'yuzu-api-01-dae6611de7aa.json')
-# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = PATH
-STORAGE_CLIENT = storage.Client(PATH)
-
-# @cache
-def read_from_cloud_storage(filename):
-    storage_client = storage.Client(PATH)
-    bucket = storage_client.get_bucket('yuzu_transactions')
-
-    df = pd.read_csv(
-    io.BytesIO(
-                 bucket.blob(blob_name = filename).download_as_string() 
-              ) ,
-                 encoding='UTF-8',
-                 sep=',')
-    
-    # try to read user_borrowed column and if doesn't exist make it and set it to 0
-    try:
-        df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'next_update_timestamp', 'user_borrowed']]
-    except:
-        df = df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'next_update_timestamp']]
-        df['user_borrowed'] = df['q_made_transaction']
-        df['user_borrowed'] = 0
-
-    return df
-
-def df_write_to_cloud_storage(df, filename):
-
-    # storage_client = storage.Client(PATH)
-    bucket = STORAGE_CLIENT.get_bucket('yuzu_transactions')
-
-    csv_string = df.to_csv(index=False)  # Omit index for cleaner output
-    # print(csv_string)
-    blob = bucket.blob(filename)
-    blob.upload_from_string(csv_string)
-    # print('')
-
-    return
-
 
 # returns basic data about our reserves in a dataframe
 def get_reserve_data():
-    
-    reserve_address_list = ['0xeb329420fae03176ec5877c34e2c38580d85e069', '0xbe8afe7e442ffffe576b979d490c5adb7823c3c6', '0x1d6492faacb1ea15641dd94fb9ab020056abbc94', '0xa0cd598ef64856502ae294aa58bfed90922fb3c7', 
-                    '0x6c29836be0dcd891c1c4ca77ff8f3a29e4a3fa5e', '0x770d3ed41f9f57ebb0463bd435df7fcc6f1e40ce', '0x3f8f2929a2a461d4b59575f132016348cf526f25', '0xbc25f58ba700452d66d1e025de6abfd23a659265']
+    # a_token_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28']
+    # v_token_list = ['0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
 
-    reserve_decimal_list = [1e18, 1e18, 1e6, 1e6, 1e8, 1e8, 1e18, 1e18]
+    reserve_address_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28',
+                '0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
 
-    reserve_name_list = ['a_zen', 'v_zen', 'v_usdc', 'a_usdc', 'v_wbtc', 'a_wbtc', 'v_weth', 'a_weth']
+    reserve_decimal_list = [1e18, 1e6, 1e6, 1e18, 1e8, 1e18, 1e6, 1e6, 1e18, 1e8]
+
+    reserve_name_list = ['a_dai', 'a_usdc', 'a_usdt', 'a_eth', 'a_wbtc', 'v_dai', 'v_usdc', 'v_usdt', 'v_eth', 'v_wbtc']
 
     df = pd.DataFrame()
 
@@ -98,43 +61,9 @@ def get_reserve_data():
     df['reserve_decimal'] = reserve_decimal_list
 
     return df
-    # reserve_list = [x.lower() for x in reserve_list]
-
-    decimals = 0
-
-    # if reserve_address == '0xEB329420Fae03176EC5877c34E2c38580D85E069'.lower(): # yuzuZen
-    #     decimals = 1e18
-    
-    # if reserve_address == '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'.lower(): # v_debt_yuzu
-    #     decimals = 1e18
-
-    # elif reserve_address == '0x1d6492FaAcB1ea15641dD94FB9AB020056aBBC94'.lower(): # v_debt_usdc
-    #     decimals = 1e6
-    
-    # elif reserve_address == '0xA0cD598EF64856502aE294aa58bFEd90922Fb3c7'.lower(): # yuzu_usdc
-    #     decimals = 1e6
-    
-    # elif reserve_address == '0x6c29836bE0DCD891C1c4CA77ff8F3A29e4A3Fa5E'.lower(): # v_debt_wbtc
-    #     decimals = 1e8
-    
-    # elif reserve_address == '0x770D3eD41f9F57eBB0463Bd435DF7FCc6f1e40Ce'.lower(): # yuzu_wbtc
-    #     decimals = 1e8
-    
-    # elif reserve_address == '0x3f8F2929a2A461d4B59575F132016348CF526F25'.lower(): # v_debt_weth
-    #     decimals = 1e18
-    
-    # elif reserve_address == '0xbc25f58bA700452D66d1E025De6aBFd23a659265'.lower(): # yuzu_weth
-    #     decimals = 1e18
-    
-
-
-    
-
-    
-    # return decimals
 
 #gets our web3 contract object
-@cache
+# @cache
 def get_contract():
     contract_address = "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE"
     contract_abi = [{"type":"constructor","stateMutability":"nonpayable","inputs":[{"type":"address","name":"weth","internalType":"address"},{"type":"address","name":"provider","internalType":"address"}]},{"type":"event","name":"OwnershipTransferred","inputs":[{"type":"address","name":"previousOwner","internalType":"address","indexed":True},{"type":"address","name":"newOwner","internalType":"address","indexed":True}],"anonymous":False},{"type":"fallback","stateMutability":"payable"},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"authorizeLendingPool","inputs":[{"type":"address","name":"lendingPool","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"borrowETH","inputs":[{"type":"address","name":"lendingPool","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"interesRateMode","internalType":"uint256"},{"type":"uint16","name":"referralCode","internalType":"uint16"}]},{"type":"function","stateMutability":"payable","outputs":[],"name":"depositETH","inputs":[{"type":"address","name":"lendingPool","internalType":"address"},{"type":"address","name":"onBehalfOf","internalType":"address"},{"type":"uint16","name":"referralCode","internalType":"uint16"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"emergencyEtherTransfer","inputs":[{"type":"address","name":"to","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"emergencyTokenTransfer","inputs":[{"type":"address","name":"token","internalType":"address"},{"type":"address","name":"to","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"string","name":"","internalType":"string"}],"name":"getSignature","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"address"}],"name":"getWETHAddress","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"address"}],"name":"owner","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"renounceOwnership","inputs":[]},{"type":"function","stateMutability":"payable","outputs":[],"name":"repayETH","inputs":[{"type":"address","name":"lendingPool","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"rateMode","internalType":"uint256"},{"type":"address","name":"onBehalfOf","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"setSignature","inputs":[{"type":"string","name":"signature","internalType":"string"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"transferOwnership","inputs":[{"type":"address","name":"newOwner","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"withdrawETH","inputs":[{"type":"address","name":"lendingPool","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"address","name":"to","internalType":"address"}]},{"type":"receive","stateMutability":"payable"}]
@@ -257,7 +186,7 @@ def get_v_token_contract(contract_address):
     return contract
 
 # # takes in a contract object and returns all associated events
-def get_yuzu_events(contract):
+def get_linea_events(contract):
     
     latest_block = web3.eth.get_block('latest')
     latest_block = int(latest_block['number'])
@@ -539,11 +468,11 @@ def find_all_transactions():
 
     # reserve_address_list = reserve_df['reserve_address'].tolist()
 
-    a_token_list = ['0xEB329420Fae03176EC5877c34E2c38580D85E069', '0xA0cD598EF64856502aE294aa58bFEd90922Fb3c7', '0x770D3eD41f9F57eBB0463Bd435DF7FCc6f1e40Ce', '0xbc25f58bA700452D66d1E025De6aBFd23a659265']
-    v_token_list = ['0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6', '0x1d6492FaAcB1ea15641dD94FB9AB020056aBBC94', '0x6c29836bE0DCD891C1c4CA77ff8F3A29e4A3Fa5E', '0x3f8F2929a2A461d4B59575F132016348CF526F25']
+    a_token_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28']
+    v_token_list = ['0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
 
-    reserve_address_list = ['0xEB329420Fae03176EC5877c34E2c38580D85E069', '0xA0cD598EF64856502aE294aa58bFEd90922Fb3c7', '0x770D3eD41f9F57eBB0463Bd435DF7FCc6f1e40Ce', '0xbc25f58bA700452D66d1E025De6aBFd23a659265',
-                    '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6', '0x1d6492FaAcB1ea15641dD94FB9AB020056aBBC94', '0x6c29836bE0DCD891C1c4CA77ff8F3A29e4A3Fa5E', '0x3f8F2929a2A461d4B59575F132016348CF526F25']
+    reserve_address_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28',
+                    '0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
 
     for reserve_address in reserve_address_list:
         if reserve_address in a_token_list:
@@ -551,7 +480,7 @@ def find_all_transactions():
         else:
             contract = get_v_token_contract(reserve_address)
 
-        events = get_yuzu_events(contract)
+        events = get_linea_events(contract)
         
         try:
             df = get_transaction_data(events, reserve_df)
