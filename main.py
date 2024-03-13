@@ -87,40 +87,24 @@ def get_last_block_tracked():
 
 #makes a dataframe and stores it in a csv file
 def make_user_data_csv(df):
-    old_df = pd.read_csv('all_users.csv')
-    old_df = old_df.drop_duplicates(subset=['wallet_address','tx_hash','number_of_tokens','block_number'], keep='last')
+    old_df = pd.read_csv('all_events.csv')
+    old_df = old_df.drop_duplicates(subset=['wallet_address', 'txHash', 'lendBorrowType'], keep='last')
 
     combined_df_list = [df, old_df]
-
     combined_df = pd.concat(combined_df_list)
-    combined_df = combined_df.drop_duplicates(subset=['wallet_address','tx_hash','number_of_tokens','block_number'], keep='last')
+    combined_df = combined_df.drop_duplicates(subset=['wallet_address', 'txHash', 'lendBorrowType'], keep='last')
 
-    combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
-    combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
+    combined_df['txHash'] = combined_df['txHash'].str.lower()
+    combined_df['tokenAddress'] = combined_df['tokenAddress'].str.lower()
 
-    # print('df', df)
-    # print('old_df', old_df)
-    # print('combined_df', combined_df)
+    # print(df)
     # print(len(old_df), len(df), len(combined_df))
-
     if len(combined_df) >= len(old_df):
-        combined_df['last_block_number'] = int(df['last_block_number'].max())
-        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'user_borrowed']]
-        
-        df_write_to_cloud_storage(combined_df)
-        # combined_df.to_csv('all_users.csv', index=False)
+        combined_df.to_csv('all_events.csv', index=False)
         print('CSV Made')
-
-    elif len(combined_df) > 0:
-        combined_df['last_block_number'] = int(df['last_block_number'].max())
-        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'user_borrowed']]
-
-        df_write_to_cloud_storage(combined_df)
-
-        # combined_df.to_csv('all_users.csv', index=False)
-        print('CSV Made')
-    
     return
+
+    
 
 # handles our csv writing
 def make_transactions_csv(df):
@@ -504,6 +488,95 @@ def handle_weth_gateway(event, enum_name):
     
     return payload_address
 
+#returns a df if a tx_hash exists
+def tx_hash_exists(df, tx_hash):
+
+    new_df = pd.DataFrame()
+
+    if ((df['txHash'] == tx_hash)).any():
+        new_df = df.loc[df['txHash'] == tx_hash]
+    
+    return new_df
+
+#returns whether a enum_name exists, and returns blank df if not
+def lend_borrow_type_exists(df, lend_borrow_type):
+
+    if ((df['lendBorrowType'] == lend_borrow_type)).any():
+        df = df.loc[df['lendBorrowType'] == lend_borrow_type]
+
+    else:
+        df = pd.DataFrame()
+
+    return df
+
+#returns df if wallet_address exists
+def wallet_address_exists(df, wallet_address):
+
+    if ((df['wallet_address'] == wallet_address)).any():
+        df = df.loc[df['wallet_address'] == wallet_address]
+
+    else:
+        df = pd.DataFrame()
+
+    return df
+
+# will tell us whether we need to find new data
+# returns a list of [tx_hash, wallet_address]
+def already_part_of_df(event, enum):
+
+    all_exist = False
+    tx_hash = ''
+    wallet_address = ''
+
+    df = pd.read_csv('all_events.csv')
+
+    tx_hash = event['transactionHash'].hex()
+    tx_hash = tx_hash.lower()
+
+    new_df = tx_hash_exists(df, tx_hash)
+
+    if len(new_df) > 0:
+        new_df = lend_borrow_type_exists(new_df, enum)
+
+        if len(new_df) > 0:
+            wallet_address = handle_weth_gateway(event, enum).lower()
+            new_df = wallet_address_exists(df, wallet_address)
+
+            if len(new_df) > 0:
+                all_exist = True
+
+    response_list = [tx_hash, wallet_address, all_exist]
+
+    return response_list
+
+#gets how many decimals our reserve is
+def get_reserve_decimals(reserve_address):
+    decimals = 0
+    if reserve_address == '0x4AF15ec2A0BD43Db75dd04E62FAA3B8EF36b00d5': # dai
+        decimals = 1e18
+    elif reserve_address == '0x176211869cA2b568f2A7D4EE941E073a821EE1ff': # usdc
+        decimals = 1e6
+    elif reserve_address == '0xA219439258ca9da29E9Cc4cE5596924745e12B93': # usdt
+        decimals = 1e6
+    elif reserve_address == '0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f': # weth
+        decimals = 1e18
+    elif reserve_address == '0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4': # wbtc
+        decimals = 1e8
+    
+    return decimals
+
+#gets our reserve price
+#@cache
+def get_tx_usd_amount(reserve_address, token_amount):
+    contract_address = '0x8429d0AFade80498EAdb9919E41437A14d45A00B'
+    contract_abi = [{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"address[]","name":"sources","type":"address[]"},{"internalType":"address","name":"fallbackOracle","type":"address"},{"internalType":"address","name":"baseCurrency","type":"address"},{"internalType":"uint256","name":"baseCurrencyUnit","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"asset","type":"address"},{"indexed":True,"internalType":"address","name":"source","type":"address"}],"name":"AssetSourceUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"baseCurrency","type":"address"},{"indexed":False,"internalType":"uint256","name":"baseCurrencyUnit","type":"uint256"}],"name":"BaseCurrencySet","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"fallbackOracle","type":"address"}],"name":"FallbackOracleUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":True,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"inputs":[],"name":"BASE_CURRENCY","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"BASE_CURRENCY_UNIT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getAssetPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"}],"name":"getAssetsPrices","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getFallbackOracle","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getSourceOfAsset","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"address[]","name":"sources","type":"address[]"}],"name":"setAssetSources","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"fallbackOracle","type":"address"}],"name":"setFallbackOracle","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}]
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+    value_usd = contract.functions.getAssetPrice(reserve_address).call()
+    decimals = get_reserve_decimals(reserve_address)
+    usd_amount = (value_usd/1e18)*(token_amount/decimals)
+    # print(usd_amount)
+    return usd_amount
+
 #makes our dataframe
 def user_data(events, enum_name):
     
@@ -623,7 +696,7 @@ def find_all_transactions():
 
     from_block = FROM_BLOCK
     
-    from_block = 2868638
+    from_block = 2869000
 
     to_block = from_block + 955
 
@@ -633,10 +706,27 @@ def find_all_transactions():
         borrow_events = get_borrow_events(contract, from_block, to_block)
         repay_events = get_repay_events(contract, from_block, to_block)
 
+        if len(deposit_events) > 0:
+            deposit_df = user_data(deposit_events, 'DEPOSIT')
+            make_user_data_csv(deposit_df)
+
+        if len(withdraw_events) > 0:
+            withdraw_df = user_data(withdraw_events, 'WITHDRAW')
+            make_user_data_csv(withdraw_df)
+
+        if len(borrow_events) > 0:
+            borrow_df = user_data(borrow_events, 'BORROW')
+            make_user_data_csv(borrow_df)
+            
+        if len(repay_events) > 0:
+            repay_df = user_data(repay_events, 'REPAY')
+            make_user_data_csv(repay_df)
+
         from_block += 955
         to_block += 955
 
         print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block)
+        print(deposit_events)
 
         time.sleep(1.5)
 
@@ -645,11 +735,8 @@ def find_all_transactions():
         
         if to_block >= latest_block:
             to_block = latest_block
-
-
     
-    
-    return df
+    return deposit_df
 
 # Gets transactions of all blocks within a specified range and returns a df with info from blocks that include our contract
 def get_all_gateway_transactions():
