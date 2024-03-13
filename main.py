@@ -7,51 +7,60 @@ from functools import cache
 import threading 
 import queue
 import time
+import datetime
 from concurrent.futures import ThreadPoolExecutor
+# import gcs_updater
+from google.cloud import storage
+import google.cloud.storage
+import os
+import sys
+import io
+from io import BytesIO
+
+
+# # Borrow USDC tx: https://eon-explorer.horizenlabs.io/tx/0xa053e235cec7c46b7cc90c92d17abdaec1786b17230ed64835c2a76f2cf95acd
+# # Deposit USDC tx: https://eon-explorer.horizenlabs.io/tx/0xddcd860b32605a558e1e244ace4b970aab5b88c74449eb10e720b0d78af8253b
+# # Borrow BTC tx: https://eon-explorer.horizenlabs.io/tx/0xf6c930a259680c81b35738d9e1982cd9a0b2f5767920d6d0a5a526e912841fec
+# # Deposit BTC tx: https://eon-explorer.horizenlabs.io/tx/0x9be4cac88854d04f6ea10389bf9fcecad8aae7155905a501c13e037228377e19
+# # Borrow ETH tx: https://eon-explorer.horizenlabs.io/tx/0x28fd834d498c5ee3f5f4f8b00be6dcec876906e16e3870a5d51d693c2952dea9
+# # Deposit ETH tx: https://eon-explorer.horizenlabs.io/tx/0x164213e475b2a4c70325c3d75426c4aa0a9e0fe1b1eeb2b9a46c6c83e93a8796
+# # Deposit ZEN tx: https://eon-explorer.horizenlabs.io/tx/0x6cd3d731c1a46f238288abb9c5769b06336281225114e5d2c1a9a234781fa1e4
+# # Borrow ZEN tx: https://eon-explorer.horizenlabs.io/tx/0xb6acca9fabb43ee466a822aa6cb68dd89b52c6cb876ccd7bf554f5da7e049308
 
 app = Flask(__name__)
 
 # Replace with the actual Optimism RPC URL
-optimism_rpc_url = 'infura_key'
+optimism_rpc_url = 'https://linea.blockpi.network/v1/rpc/public'
 
 # Create a Web3 instance to connect to the Optimism blockchain
 web3 = Web3(Web3.HTTPProvider(optimism_rpc_url))
 web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-LATEST_BLOCK = web3.eth.get_block_number()
-FROM_BLOCK = 1070504 - 1000
+# LATEST_BLOCK = web3.eth.get_block_number()
+LATEST_BLOCK = 951714 + 1
+#Lending pool founding block
+FROM_BLOCK = 758632
 # FROM_BLOCK = 0
 
-# Replace with the actual Aave V2 contract address
-# contract_address = "0x871AfF0013bE6218B61b28b274a6F53DB131795F"
+# returns basic data about our reserves in a dataframe
+def get_reserve_data():
+    # a_token_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28']
+    # v_token_list = ['0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
 
+    reserve_address_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28',
+                '0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
 
-#gets how many decimals our reserve is
-def get_reserve_decimals(reserve_address):
-    decimals = 0
-    if reserve_address == '0x4AF15ec2A0BD43Db75dd04E62FAA3B8EF36b00d5': # dai
-        decimals = 1e18
-    elif reserve_address == '0x176211869cA2b568f2A7D4EE941E073a821EE1ff': # usdc
-        decimals = 1e6
-    elif reserve_address == '0xA219439258ca9da29E9Cc4cE5596924745e12B93': # usdt
-        decimals = 1e6
-    elif reserve_address == '0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f': # weth
-        decimals = 1e18
-    elif reserve_address == '0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4': # wbtc
-        decimals = 1e8
-    
-    return decimals
-#gets our reserve price
-#@cache
-def get_tx_usd_amount(reserve_address, token_amount):
-    contract_address = '0x8429d0AFade80498EAdb9919E41437A14d45A00B'
-    contract_abi = [{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"address[]","name":"sources","type":"address[]"},{"internalType":"address","name":"fallbackOracle","type":"address"},{"internalType":"address","name":"baseCurrency","type":"address"},{"internalType":"uint256","name":"baseCurrencyUnit","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"asset","type":"address"},{"indexed":True,"internalType":"address","name":"source","type":"address"}],"name":"AssetSourceUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"baseCurrency","type":"address"},{"indexed":False,"internalType":"uint256","name":"baseCurrencyUnit","type":"uint256"}],"name":"BaseCurrencySet","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"fallbackOracle","type":"address"}],"name":"FallbackOracleUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":True,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"inputs":[],"name":"BASE_CURRENCY","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"BASE_CURRENCY_UNIT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getAssetPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"}],"name":"getAssetsPrices","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getFallbackOracle","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getSourceOfAsset","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"address[]","name":"sources","type":"address[]"}],"name":"setAssetSources","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"fallbackOracle","type":"address"}],"name":"setFallbackOracle","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}]
-    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-    value_usd = contract.functions.getAssetPrice(reserve_address).call()
-    decimals = get_reserve_decimals(reserve_address)
-    usd_amount = (value_usd/1e18)*(token_amount/decimals)
-    # print(usd_amount)
-    return usd_amount
+    reserve_decimal_list = [1e18, 1e6, 1e6, 1e18, 1e8, 1e18, 1e6, 1e6, 1e18, 1e8]
+
+    reserve_name_list = ['a_dai', 'a_usdc', 'a_usdt', 'a_eth', 'a_wbtc', 'v_dai', 'v_usdc', 'v_usdt', 'v_eth', 'v_wbtc']
+
+    df = pd.DataFrame()
+
+    df['reserve_name'] = reserve_name_list
+    df['reserve_address'] = reserve_address_list
+    df['reserve_decimal'] = reserve_decimal_list
+
+    return df
 
 #gets our web3 contract object
 # @cache
@@ -64,490 +73,570 @@ def get_contract():
 
     return contract
 
-#returns our lists
-def user_data(user_address, events, enum_name):
-    df = pd.DataFrame()
+# gets the last block number we have gotten data from and returns this block number
+def get_last_block_tracked():
+    df = pd.read_csv('all_users.csv')
+    
+    last_block_monitored = df['last_block_number'].max()
 
-    user_address_list = []
-    tx_hash_list = []
-    timestamp_list = []
-    token_address_list = []
-    token_volume_list = []
-    token_usd_amount_list = []
-    lend_borrow_type_list = []
+    last_block_monitored = int(last_block_monitored)
 
-    user = 'user'
+    return last_block_monitored
 
-    # start_time = time.time()
-    for event in events:
+# print(get_last_block_tracked())
 
+#makes a dataframe and stores it in a csv file
+def make_user_data_csv(df):
+    old_df = pd.read_csv('all_users.csv')
+    old_df = old_df.drop_duplicates(subset=['wallet_address','tx_hash','number_of_tokens','block_number'], keep='last')
 
-        payload_address = event['args'][user].lower()
-        tx_hash = event['transactionHash'].hex()
+    combined_df_list = [df, old_df]
+
+    combined_df = pd.concat(combined_df_list)
+    combined_df = combined_df.drop_duplicates(subset=['wallet_address','tx_hash','number_of_tokens','block_number'], keep='last')
+
+    combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
+    combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
+
+    # print('df', df)
+    # print('old_df', old_df)
+    # print('combined_df', combined_df)
+    # print(len(old_df), len(df), len(combined_df))
+
+    if len(combined_df) >= len(old_df):
+        combined_df['last_block_number'] = int(df['last_block_number'].max())
+        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'user_borrowed']]
         
-        if payload_address.lower() == '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995'.lower():
-            if enum_name == 'LEND' or enum_name == 'BORROW':
-                user = 'onBehalfOf'
-                payload_address = event['args'][user].lower()
+        df_write_to_cloud_storage(combined_df)
+        # combined_df.to_csv('all_users.csv', index=False)
+        print('CSV Made')
 
+    elif len(combined_df) > 0:
+        combined_df['last_block_number'] = int(df['last_block_number'].max())
+        combined_df = combined_df[['wallet_address', 'token_name', 'number_of_tokens', 'reserve_address', 'tx_hash', 'block_number', 'last_block_number', 'q_made_transaction', '10_zen_deposited', '001_wbtc_deposited', '25_usdc_borrowed', '02_weth_borrowed', 'user_borrowed']]
 
-        # block = web3.eth.get_block(event['blockNumber'])
-        # if block['timestamp'] >= 1701086400:
-        if enum_name != 'COLLATERALISE':
-            if payload_address == user_address:
-                block = web3.eth.get_block(event['blockNumber'])
+        df_write_to_cloud_storage(combined_df)
 
-                user_address_list.append(payload_address)
-                tx_hash_list.append(tx_hash)
-                timestamp_list.append(block['timestamp'])
-                token_address_list.append(event['args']['reserve'])
-                token_volume_list.append(event['args']['amount'])
-                token_usd_amount_list.append(get_tx_usd_amount(event['args']['reserve'], (event['args']['amount'])))
-                lend_borrow_type_list.append(enum_name)
-        
-        else:
-            if event['args'][user].lower() == user_address:
-                block = web3.eth.get_block(event['blockNumber'])
+        # combined_df.to_csv('all_users.csv', index=False)
+        print('CSV Made')
+    
+    return
 
-                user_address_list.append(event['args'][user].lower())
-                tx_hash_list.append(event['transactionHash'].hex())
-                timestamp_list.append(block['timestamp'])
-                token_address_list.append(event['args']['reserve'])
-                token_volume_list.append(0)
-                token_usd_amount_list.append(0)
-                lend_borrow_type_list.append(enum_name)
-    # i = 0
+# handles our csv writing
+def make_transactions_csv(df):
 
+    old_df = read_from_cloud_storage('user_transactions.csv')
 
-    df['wallet_address'] = user_address_list
-    df['txHash'] = tx_hash_list
-    df['timestamp'] = timestamp_list
-    df['tokenAddress'] = token_address_list
-    df['tokenVolume'] = token_volume_list
-    df['tokenUSDAmount'] = token_usd_amount_list
-    df['lendBorrowType'] = lend_borrow_type_list
+    # old_df = pd.read_csv('user_transactions.csv')
 
-    # print('User Data Event Looping done in: ', time.time() - start_time)
+    old_df = old_df.drop_duplicates(subset=['wallet_address','token_name','number_of_tokens','reserve_address','tx_hash','block_number'], keep='last')
+
+    combined_df_list = [df, old_df]
+
+    combined_df = pd.concat(combined_df_list)
+    combined_df = combined_df.drop_duplicates(subset=['wallet_address','token_name','number_of_tokens','reserve_address','tx_hash','block_number'], keep='last')
+
+    combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
+    combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
+
+    temp_df = df.loc[df['wallet_address'] == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower()]
+    temp_df = temp_df.loc[temp_df['token_name'] == 'v_usdc']
+
+    if len(temp_df) > 1:
+        print('df')
+        print(df)
+        print(df.dtypes)
+        print()
+        print('old_df')
+        print(old_df)
+        print(old_df.dtypes)
+        print('combined_df')
+        print(combined_df)
+        print(combined_df.dtypes)
+
+    if len(combined_df) >= len(old_df):
+        combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
+        combined_df['next_update_timestamp'] = int(combined_df['next_update_timestamp'].max())
+        df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
+        # combined_df.to_csv('user_transactions.csv', index=False)
+        # print('CSV Made')
+
+    # elif len(combined_df) > 0:
+    #     combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
+    #     df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
+        # combined_df.to_csv('user_transactions.csv', index=False)
+        # print('CSV Made')
+    
+    return
+
+# # takes in an a_token address and returns it's contract object
+def get_a_token_contract(contract_address):
+    # contract_address = "0xEB329420Fae03176EC5877c34E2c38580D85E069"
+    contract_abi = [{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"owner","type":"address"},{"indexed":True,"internalType":"address","name":"spender","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"from","type":"address"},{"indexed":True,"internalType":"address","name":"to","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"index","type":"uint256"}],"name":"BalanceTransfer","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"from","type":"address"},{"indexed":True,"internalType":"address","name":"target","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"index","type":"uint256"}],"name":"Burn","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"underlyingAsset","type":"address"},{"indexed":True,"internalType":"address","name":"pool","type":"address"},{"indexed":False,"internalType":"address","name":"treasury","type":"address"},{"indexed":False,"internalType":"address","name":"incentivesController","type":"address"},{"indexed":False,"internalType":"uint8","name":"aTokenDecimals","type":"uint8"},{"indexed":False,"internalType":"string","name":"aTokenName","type":"string"},{"indexed":False,"internalType":"string","name":"aTokenSymbol","type":"string"},{"indexed":False,"internalType":"bytes","name":"params","type":"bytes"}],"name":"Initialized","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"from","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"index","type":"uint256"}],"name":"Mint","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"from","type":"address"},{"indexed":True,"internalType":"address","name":"to","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"ATOKEN_REVISION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"DOMAIN_SEPARATOR","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"EIP712_REVISION","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PERMIT_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"POOL","outputs":[{"internalType":"contract ILendingPool","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"RESERVE_TREASURY_ADDRESS","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"UNDERLYING_ASSET_ADDRESS","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"_nonces","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"address","name":"receiverOfUnderlying","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"burn","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"getIncentivesController","outputs":[{"internalType":"contract IAaveIncentivesController","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getScaledUserBalanceAndSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"handleRepayment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract ILendingPool","name":"pool","type":"address"},{"internalType":"address","name":"treasury","type":"address"},{"internalType":"address","name":"underlyingAsset","type":"address"},{"internalType":"contract IAaveIncentivesController","name":"incentivesController","type":"address"},{"internalType":"uint8","name":"aTokenDecimals","type":"uint8"},{"internalType":"string","name":"aTokenName","type":"string"},{"internalType":"string","name":"aTokenSymbol","type":"string"},{"internalType":"bytes","name":"params","type":"bytes"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"mint","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"mintToTreasury","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"permit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"scaledBalanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"scaledTotalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transferOnLiquidation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"target","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferUnderlyingTo","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"}]    
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+    return contract
+
+# # takes in an v_token address and returns it's contract object
+def get_v_token_contract(contract_address):
+    # contract_address = "0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6"
+    contract_abi = [{"type":"event","name":"Approval","inputs":[{"type":"address","name":"owner","internalType":"address","indexed":True},{"type":"address","name":"spender","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"BorrowAllowanceDelegated","inputs":[{"type":"address","name":"fromUser","internalType":"address","indexed":True},{"type":"address","name":"toUser","internalType":"address","indexed":True},{"type":"address","name":"asset","internalType":"address","indexed":False},{"type":"uint256","name":"amount","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Burn","inputs":[{"type":"address","name":"user","internalType":"address","indexed":True},{"type":"uint256","name":"amount","internalType":"uint256","indexed":False},{"type":"uint256","name":"currentBalance","internalType":"uint256","indexed":False},{"type":"uint256","name":"balanceIncrease","internalType":"uint256","indexed":False},{"type":"uint256","name":"avgStableRate","internalType":"uint256","indexed":False},{"type":"uint256","name":"newTotalSupply","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Initialized","inputs":[{"type":"address","name":"underlyingAsset","internalType":"address","indexed":True},{"type":"address","name":"pool","internalType":"address","indexed":True},{"type":"address","name":"incentivesController","internalType":"address","indexed":False},{"type":"uint8","name":"debtTokenDecimals","internalType":"uint8","indexed":False},{"type":"string","name":"debtTokenName","internalType":"string","indexed":False},{"type":"string","name":"debtTokenSymbol","internalType":"string","indexed":False},{"type":"bytes","name":"params","internalType":"bytes","indexed":False}],"anonymous":False},{"type":"event","name":"Mint","inputs":[{"type":"address","name":"user","internalType":"address","indexed":True},{"type":"address","name":"onBehalfOf","internalType":"address","indexed":True},{"type":"uint256","name":"amount","internalType":"uint256","indexed":False},{"type":"uint256","name":"currentBalance","internalType":"uint256","indexed":False},{"type":"uint256","name":"balanceIncrease","internalType":"uint256","indexed":False},{"type":"uint256","name":"newRate","internalType":"uint256","indexed":False},{"type":"uint256","name":"avgStableRate","internalType":"uint256","indexed":False},{"type":"uint256","name":"newTotalSupply","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"event","name":"Transfer","inputs":[{"type":"address","name":"from","internalType":"address","indexed":True},{"type":"address","name":"to","internalType":"address","indexed":True},{"type":"uint256","name":"value","internalType":"uint256","indexed":False}],"anonymous":False},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"DEBT_TOKEN_REVISION","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"contract ILendingPool"}],"name":"POOL","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"address"}],"name":"UNDERLYING_ASSET_ADDRESS","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"allowance","inputs":[{"type":"address","name":"owner","internalType":"address"},{"type":"address","name":"spender","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"approve","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"approveDelegation","inputs":[{"type":"address","name":"delegatee","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"balanceOf","inputs":[{"type":"address","name":"account","internalType":"address"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"borrowAllowance","inputs":[{"type":"address","name":"fromUser","internalType":"address"},{"type":"address","name":"toUser","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"burn","inputs":[{"type":"address","name":"user","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint8","name":"","internalType":"uint8"}],"name":"decimals","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"decreaseAllowance","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"subtractedValue","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"getAverageStableRate","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"address","name":"","internalType":"contract IRewarder"}],"name":"getIncentivesController","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint40","name":"","internalType":"uint40"}],"name":"getSupplyData","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"},{"type":"uint256","name":"","internalType":"uint256"}],"name":"getTotalSupplyAndAvgRate","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint40","name":"","internalType":"uint40"}],"name":"getTotalSupplyLastUpdated","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint40","name":"","internalType":"uint40"}],"name":"getUserLastUpdated","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"getUserStableRate","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"increaseAllowance","inputs":[{"type":"address","name":"spender","internalType":"address"},{"type":"uint256","name":"addedValue","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[],"name":"initialize","inputs":[{"type":"address","name":"pool","internalType":"contract ILendingPool"},{"type":"address","name":"underlyingAsset","internalType":"address"},{"type":"address","name":"incentivesController","internalType":"contract IRewarder"},{"type":"uint8","name":"debtTokenDecimals","internalType":"uint8"},{"type":"string","name":"debtTokenName","internalType":"string"},{"type":"string","name":"debtTokenSymbol","internalType":"string"},{"type":"bytes","name":"params","internalType":"bytes"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"mint","inputs":[{"type":"address","name":"user","internalType":"address"},{"type":"address","name":"onBehalfOf","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"},{"type":"uint256","name":"rate","internalType":"uint256"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"string","name":"","internalType":"string"}],"name":"name","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"principalBalanceOf","inputs":[{"type":"address","name":"user","internalType":"address"}]},{"type":"function","stateMutability":"view","outputs":[{"type":"string","name":"","internalType":"string"}],"name":"symbol","inputs":[]},{"type":"function","stateMutability":"view","outputs":[{"type":"uint256","name":"","internalType":"uint256"}],"name":"totalSupply","inputs":[]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"transfer","inputs":[{"type":"address","name":"recipient","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]},{"type":"function","stateMutability":"nonpayable","outputs":[{"type":"bool","name":"","internalType":"bool"}],"name":"transferFrom","inputs":[{"type":"address","name":"sender","internalType":"address"},{"type":"address","name":"recipient","internalType":"address"},{"type":"uint256","name":"amount","internalType":"uint256"}]}]    
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+    return contract
+
+# # takes in a contract object and returns all associated events
+def get_linea_events(contract):
+    
+    latest_block = web3.eth.get_block('latest')
+    latest_block = int(latest_block['number'])
+
+    latest_block = 2868629
+
+    from_block = latest_block - 500
+
+    # events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
+    events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
+    
+    print(events)
+
+    return events
+
+# # first quest that will add column to df and specify 0 as False and 1 as True
+def user_made_transaction(df):
+    df['user_made_transaction'] = 1
     return df
 
-#handles our weth_gateway events and returns the accurate user_address
-def handle_weth_gateway(event, enum_name):
+# # takes in our whole dataframe, wallet_address, reserve_address, minimum_tokens
+# # will return whether the user has a transaction for a certain token that passes that token's minimum transfer
+# # example: Can check whether a user has deposited 10 zen in one transaction
+def is_quest_completed(df, wallet_address, reserve_address, minimum_tokens):
 
-    payload_address = event['args']['user'].lower()
+    df = df.loc[df['wallet_address'] == wallet_address]
+    df = df.loc[df['reserve_address'] == reserve_address]
 
-    if payload_address.lower() == '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995'.lower():
-        if enum_name == 'LEND' or enum_name == 'BORROW':
-            user = 'onBehalfOf'
-            payload_address = event['args'][user].lower()
+    is_completed = -1
+
+    if len(df) > 0:
+        tokens_transacted = df['number_of_tokens'].max()
+
+        if tokens_transacted >= minimum_tokens:
+            is_completed = 1
+        
+        else:
+            is_completed = 0
     
-    return payload_address
+    else:
+        is_completed = 0
 
-#makes our dataframe
-def user_data_2(user_address, events, enum_name):
+    return int(is_completed)
+
+# # Second quest that will add column to df and specify 0 as False and 1 as True
+# # User deposited 10 Zen in one transaction
+def user_deposited_10_zen(df):
+
+    reserve_address = '0xeb329420fae03176ec5877c34e2c38580d85e069'
+    minimum_tokens = 10
+    quest_name = '10_zen_deposited'
+
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+        completed_list.append(is_completed)
+
+    df[quest_name] = completed_list
+
+    return df
+
+# # Third quest that will add column to df and specify 0 as False and 1 as True
+# # User deposited 0.001 wbtc in one transaction
+def user_deposited_001_wbtc(df):
+
+    reserve_address = '0x770d3ed41f9f57ebb0463bd435df7fcc6f1e40ce'
+    minimum_tokens = 0.001
+    quest_name = '001_wbtc_deposited'
+
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+        completed_list.append(is_completed)
+
+    df[quest_name] = completed_list
+
+    return df
+
+# # 4th quest that will add column to df and specify 0 as False and 1 as True
+# # User borrowed 25usdc in one transaction
+def user_borrowed_25_usdc(df):
+
+    reserve_address = '0x1d6492faacb1ea15641dd94fb9ab020056abbc94'
+    minimum_tokens = 25
+    quest_name = '25_usdc_borrowed'
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+        completed_list.append(is_completed)
+
+    df[quest_name] = completed_list
+
+    return df
+
+# # 5th quest that will add column to df and specify 0 as False and 1 as True
+# # User borrowed 02 weth in one transaction
+def user_borrowed_02_weth(df):
+
+    reserve_address = '0x3f8f2929a2a461d4b59575f132016348cf526f25'
+    minimum_tokens = 0.02
+    quest_name = '02_weth_borrowed'
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+        completed_list.append(is_completed)
+
+    df[quest_name] = completed_list
+
+    return df
+
+#finds if our users have borrowed anything
+def user_borrowed_anything(df):
+
+    print('User Borrowed Df before updates')
+    print(df)
+    # df = read_from_cloud_storage('user_transactions.csv')
+
+    reserve_address_list = ['0x1d6492faacb1ea15641dd94fb9ab020056abbc94', '0x3f8f2929a2a461d4b59575f132016348cf526f25', '0xbe8afe7e442ffffe576b979d490c5adb7823c3c6', '0x6c29836be0dcd891c1c4ca77ff8f3a29e4a3fa5e']
+
+    wallet_address_list = df['wallet_address'].tolist()
+
+    minimum_tokens = 0.000000000000000001
+
+    quest_name = 'user_borrowed'
+
+    completed_list = []
+
+    for wallet_address in wallet_address_list:
+        is_completed = 0
+        found_a_borrow = False
+        for reserve_address in reserve_address_list:
+            is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
+            if is_completed == 1:
+                found_a_borrow = True
+
+        if found_a_borrow == True:
+            completed_list.append(1)
+        
+        else:
+            completed_list.append(0)
+
     
-    df = pd.DataFrame()
+    df[quest_name] = completed_list
+
+    print('User Borrowed Df after updates')
+    print(df)
+
+    return df
+
+
+    
+
+# # aggregate function to find the results of all of our quests
+# # returns a dataframe
+def find_5_quests(df):
+
+    print('Before 5 Quests Df')
+    print(df)
+
+    df = user_deposited_10_zen(df)
+    df = user_deposited_001_wbtc(df)
+    df = user_borrowed_25_usdc(df)
+    df = user_borrowed_02_weth(df)
+    df = user_borrowed_anything(df)
+
+    return df
+
+
+def make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list):
+    
+    # handles blank dataframes
+    if len(user_address_list) < 1:
+        df = read_from_cloud_storage('user_transactions.csv')
+        # df = pd.read_csv('user_transactions.csv')
+        df['last_block_number'] = int(max(all_block_list))
+
+    else:
+        df = pd.DataFrame()
+        df['wallet_address'] = user_address_list
+        df['token_name'] = token_name_list
+        df['number_of_tokens'] = token_amount_list
+        df['reserve_address'] = token_address_list
+        df['tx_hash'] = tx_hash_list
+        df['block_number'] = block_number_list
+
+        df['last_block_number'] = max(all_block_list)
+
+        df['q_made_transaction'] = made_transaction_list
+
+        df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']] = df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']].astype(str)
+    
+    
+    return df
+
+# # takes in an events object and returns a dataframe with relevent transaction output
+def get_transaction_data(events, reserve_df):
 
     user_address_list = []
-    tx_hash_list = []
-    timestamp_list = []
+    token_name_list = []
     token_address_list = []
-    token_volume_list = []
-    token_usd_amount_list = []
-    lend_borrow_type_list = []
+    token_amount_list = []
+    block_number_list = []
+    tx_hash_list = []
+    
+    # our quest lists below
+    made_transaction_list = []
 
-    user = ''
+    all_block_list = [0]
 
-    start_time = time.time()
-    i = 1
-    print(len(events))
     for event in events:
-        print(i, '/', len(events))
-        i+=1
-        # if enum_name == 'REPAY':
-        #     user = 'user'
-        # elif enum_name == 'COLLATERALISE':
-        #     user = 'user'
+        tx_from = event['args']['from'].lower()
+        tx_to = event['args']['to'].lower()
+
+        if tx_to == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower() or tx_from == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower():
+            print('found you')
+        # print(event)
+
+        # if (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()) and (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x54F7D603881d850A83ec29e2A1DD61e4D0b8D58A".lower()):
+        if len(tx_from) == 42 and len(tx_to) == 42:
+            token_address = event['address'].lower()
+            token_amount = event['args']['value']
+            temp_df = reserve_df.loc[reserve_df['reserve_address'] == token_address]
+
+            # get whole numbers of our token amount
+            token_amount = round(token_amount / temp_df['reserve_decimal'].iloc[0], 18)
+            token_name = temp_df['reserve_name'].iloc[0]
+            block_number = int(event['blockNumber'])
+
+            user_address_list.append(tx_to)
+            token_name_list.append(token_name)
+            token_address_list.append(token_address)
+            token_amount_list.append(token_amount)
+            block_number_list.append(block_number)
+
+            all_block_list.append(block_number)
+
+            tx_hash_list.append(event['transactionHash'].hex().lower())
+
+            if event['transactionHash'].hex().lower() == '0x2dbc3745eba9acf0f552ddfd8cbd9a0c2b9e85222ac22bb5caf475d7cb4caad2' and token_name == 'v_usdc':
+                print(event)
+                print('wowowowow')
+
+            made_transaction_list.append(int(1))
+        
+        elif tx_from == "0x0000000000000000000000000000000000000000" and tx_to == "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
+            print('WETH Gateway Transaction Found!')
+            print(event)
+
+    df = make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list)
+    print('Transaction DF')
+    print(df[['wallet_address', 'token_name', 'number_of_tokens', 'tx_hash']])
+
+    df = find_5_quests(df)
+    print(df)
+    # # makes our dataframe
+    make_transactions_csv(df)
+    
+    return df
+
+# # runs all our looks
+# # updates our csv
+def find_all_transactions():
+    # # aZen
+    # contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069' 
+    # # # vZen
+    # # contract_address = '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'
+    reserve_df = get_reserve_data()
+
+    # reserve_address_list = reserve_df['reserve_address'].tolist()
+
+    a_token_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28']
+    v_token_list = ['0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
+
+    reserve_address_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28',
+                    '0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
+
+    contract = get_contract()
+
+    for reserve_address in reserve_address_list:
+
+        # if reserve_address in a_token_list:
+        #     contract = get_a_token_contract(reserve_address)
         # else:
-        #     user = 'user'
+        #     contract = get_v_token_contract(reserve_address)
 
-        # block = web3.eth.get_block(event['blockNumber'])
-        # if block['timestamp'] >= 1701086400:
-        if enum_name != 'COLLATERALISE':
-            
-            exists_list = already_part_of_df(event, enum_name)
-
-            tx_hash = exists_list[0]
-            wallet_address = exists_list[1]
-            exists = exists_list[2]
-
-            if exists == False and len(wallet_address) < 2:
-                
-                #adds wallet_address if it doesn't exist
-                if len(wallet_address) < 2:
-                    wallet_address = handle_weth_gateway(event, enum_name)
-                
-
-                block = web3.eth.get_block(event['blockNumber'])
-
-                user_address_list.append(wallet_address)
-                tx_hash_list.append(tx_hash)
-                timestamp_list.append(block['timestamp'])
-                token_address = event['args']['reserve']
-                token_address_list.append(token_address)
-                token_volume = event['args']['amount']
-                token_volume_list.append(token_volume)
-                token_usd_amount_list.append(get_tx_usd_amount(token_address, token_volume))
-                lend_borrow_type_list.append(enum_name)
-            
-            else:
-                print('Skipped')
-
-        else:
-            exists_list = already_part_of_df(event, enum_name)
-
-            tx_hash = exists_list[0]
-            wallet_address = exists_list[1]
-            exists = exists_list[2]
-            
-            if exists == False and len(wallet_address) < 2:
-                
-                wallet_address = handle_weth_gateway(event, enum_name)
-
-                block = web3.eth.get_block(event['blockNumber'])
-
-                user_address_list.append(wallet_address)
-                tx_hash_list.append(tx_hash)
-                timestamp_list.append(block['timestamp'])
-                token_address_list.append(event['args']['reserve'])
-                token_volume_list.append(0)
-                token_usd_amount_list.append(0)
-                lend_borrow_type_list.append(enum_name)
-            
-            else:
-                print('Skipped')
-
-    df['wallet_address'] = user_address_list
-    df['txHash'] = tx_hash_list
-    df['timestamp'] = timestamp_list
-    df['tokenAddress'] = token_address_list
-    df['tokenVolume'] = token_volume_list
-    df['tokenUSDAmount'] = token_usd_amount_list
-    df['lendBorrowType'] = lend_borrow_type_list
-
-    print('User Data Event Looping done in: ', time.time() - start_time)
+        events = get_linea_events(contract)
+        
+        try:
+            df = get_transaction_data(events, reserve_df)
+        except:
+            print(reserve_address, 'failed')
+    
     return df
 
-# will tell us whether we need to find new data
-# returns a list of [tx_hash, wallet_address]
-def already_part_of_df(event, enum):
+# Gets transactions of all blocks within a specified range and returns a df with info from blocks that include our contract
+def get_all_gateway_transactions():
 
-    all_exist = False
-    tx_hash = ''
-    wallet_address = ''
+    weth_gateway_address = "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE"
 
-    df = pd.read_csv('all_events.csv')
+    # from_block = get_last_block_tracked()
 
-    tx_hash = event['transactionHash'].hex()
-    tx_hash = tx_hash.lower()
+    from_block = 946990
 
-    new_df = tx_hash_exists(df, tx_hash)
+    print('Last Block Number: ', from_block)
+    # from_block = 940460
 
-    if len(new_df) > 0:
-        new_df = lend_borrow_type_exists(new_df, enum)
+    tx_hash_list = []
+    value_list = []
+    user_address_list = []
+    block_number_list = []
 
-        if len(new_df) > 0:
-            wallet_address = handle_weth_gateway(event, enum).lower()
-            new_df = wallet_address_exists(df, wallet_address)
-
-            if len(new_df) > 0:
-                all_exist = True
-
-    response_list = [tx_hash, wallet_address, all_exist]
-
-    return response_list
-
-#returns a df if a tx_hash exists
-def tx_hash_exists(df, tx_hash):
-
-    new_df = pd.DataFrame()
-
-    if ((df['txHash'] == tx_hash)).any():
-        new_df = df.loc[df['txHash'] == tx_hash]
+    i = 0
+    blocks_to_cover = LATEST_BLOCK - from_block
     
-    return new_df
+    last_block_number = 0
+    # adds our values to our above lists
+    for block_number in range(from_block, LATEST_BLOCK + 1):
+        block = web3.eth.get_block(block_number)
+        tx_hashes = block.transactions
 
-#returns whether a enum_name exists, and returns blank df if not
-def lend_borrow_type_exists(df, lend_borrow_type):
+        print(i, '/', blocks_to_cover)
+        i += 1
 
-    if ((df['lendBorrowType'] == lend_borrow_type)).any():
-        df = df.loc[df['lendBorrowType'] == lend_borrow_type]
+        for tx_hash in tx_hashes:
+            transaction = web3.eth.get_transaction(tx_hash)
+            print(transaction)
+            print('')
+            if transaction['to'] == weth_gateway_address:
+               # print(transaction)
+                user_address_list.append(transaction['from'])
+                tx_hash_list.append(transaction['hash'].hex())
+                value_list.append(transaction['value'])
+                block_number_list.append(transaction['blockNumber'])
+        
+        last_block_number = int(block_number)
+                # print('found')
+
+    print('Last Block Number: ', last_block_number)
+
+
+    # handles blank dataframes
+    if len(user_address_list) < 1:
+        df = pd.read_csv('all_users.csv')
+        df['last_block_number'] = last_block_number
 
     else:
         df = pd.DataFrame()
+        df['wallet_address'] = user_address_list
+        df['tx_hash'] = tx_hash_list
+        df['number_of_tokens'] = value_list
+        df['block_number'] = block_number_list
+        df['last_block_number'] = last_block_number
 
-    return df
+    make_user_data_csv(df)
 
-#returns df if wallet_address exists
-def wallet_address_exists(df, wallet_address):
+# get_all_gateway_transactions()
 
-    if ((df['wallet_address'] == wallet_address)).any():
-        df = df.loc[df['wallet_address'] == wallet_address]
-
-    else:
-        df = pd.DataFrame()
-
-    return df
-
-#gets all borrow events
-# @cache
-def get_borrow_events(contract):
-    # latest_block = web3.eth.get_block_number()
-    # from_block = latest_block - 100000
-    # from_block = 1052610
-
-    events = contract.events.Borrow.get_logs(fromBlock=FROM_BLOCK, toBlock='latest')
-
-    return events
-
-#gets all deposit events
-# @cache
-def get_lend_events(contract):
-    # latest_block = web3.eth.get_block_number()
-    # from_block = latest_block - 100000
-    # from_block = 1052610
-
-    events = contract.events.Deposit.get_logs(fromBlock=FROM_BLOCK, toBlock='latest')
-
-    return events
-
-#gets all repay events
-# @cache
-def get_repay_events(contract):
-    # latest_block = web3.eth.get_block_number()
-    # from_block = latest_block - 100000
-    # from_block = 1052610
-
-    events = contract.events.Repay.get_logs(fromBlock=FROM_BLOCK, toBlock='latest')
-
-    return events
-
-#gets all collateralise events
-# @cache
-def get_collateralise_events(contract):
-    # latest_block = web3.eth.get_block_number()
-    # from_block = latest_block - 100000
-    # from_block = 1052610
-
-    events = contract.events.ReserveUsedAsCollateralEnabled.get_logs(fromBlock=FROM_BLOCK, toBlock='latest')
-
-    return events
-
-
-#gets all of our borrow transactions
-# @cache
-def get_borrow_transactions(user_address, contract):
-
-    df = pd.DataFrame()
-
-    start_time = time.time()
-
-    events = get_borrow_events(contract)
-    print('Events found in: ', time.time() - start_time)
-
-    if len(events) > 1:
-        if user_address == '0x764fdcdbca9998e5ee10b3370a74044f43ed28e2' or user_address == '0x6995fb91e61e98ae8686e299f51e0b2db7fb853b':
-            try:
-                # df = user_data(user_address, events, 'BORROW')
-                df = user_data_2(user_address, events, 'BORROW')
-            except:
-                df = pd.DataFrame()
-        else:
-            try:
-                df = user_data(user_address, events, 'BORROW')
-                # df = user_data_2(user_address, events, 'BORROW')
-            except:
-                df = pd.DataFrame()
-
-    return df
-
-#gets all of our deposit transactions
-# @cache
-def get_lend_transactions(user_address, contract):
-    
-    df = pd.DataFrame()
-
-    events = get_lend_events(contract)
-
-    if len(events) > 1:
-        if user_address == '0x764fdcdbca9998e5ee10b3370a74044f43ed28e2' or user_address == '0x6995fb91e61e98ae8686e299f51e0b2db7fb853b':
-            try:
-                # df = user_data(user_address, events, 'LEND')
-                df = user_data_2(user_address, events, 'LEND')
-            except:
-                df = pd.DataFrame()
-        else:
-            try:
-                df = user_data(user_address, events, 'LEND')
-                # df = user_data_2(user_address, events, 'LEND')
-            except:
-                df = pd.DataFrame()
-
-    return df
-
-#gets all of our repayment transactions
-# @cache
-def get_repay_transactions(user_address, contract):
-
-    df = pd.DataFrame()
-
-
-    events = get_repay_events(contract)
-
-    if len(events) > 1:
-        if user_address == '0x764fdcdbca9998e5ee10b3370a74044f43ed28e2' or user_address == '0x6995fb91e61e98ae8686e299f51e0b2db7fb853b':
-            try:
-                # df = user_data(user_address, events, 'REPAY')
-                df = user_data_2(user_address, events, 'REPAY')
-            except:
-                df = pd.DataFrame()
-        else:
-            try:
-                df = user_data(user_address, events, 'REPAY')
-                # df = user_data_2(user_address, events, 'REPAY')
-            except:
-                df = pd.DataFrame()
-    
-    return df
-
-# @cache
-def get_collateralalise_transactions(user_address, contract):
-    
-    df = pd.DataFrame()
-    
-    events = get_collateralise_events(contract)
-    if len(events) > 1:
-        if user_address == '0x764fdcdbca9998e5ee10b3370a74044f43ed28e2' or user_address == '0x6995fb91e61e98ae8686e299f51e0b2db7fb853b':
-            try:
-                # df = user_data(user_address, events, 'COLLATERALISE')
-                df = user_data_2(user_address, events, 'COLLATERALISE')
-            except:
-                df = pd.DataFrame()
-        else:
-            try:
-                df = user_data(user_address, events, 'COLLATERALISE')
-                # df = user_data_2(user_address, events, 'COLLATERALISE')
-            except:
-                df = pd.DataFrame()
-
-    return df
-
-#takes in our user address and will populate all the needed fields for our api_response
-# @cache
-def get_all_user_transactions(user_address):
-
-    df = pd.DataFrame()
-
-    df_list = []
-
-    if len(user_address) == 42:
-        contract = get_contract()
-
-        start_time = time.time()
-        borrow_df = get_borrow_transactions(user_address, contract)
-        # print(borrow_df)
-        make_user_data_csv(borrow_df)
-        print('Borrower Transactions found in: ', time.time() - start_time)
-        start_time = time.time()
-        lend_df = get_lend_transactions(user_address, contract)
-        make_user_data_csv(lend_df)
-        print(lend_df)
-        print('Lend Transactions found in: ', time.time() - start_time)
-        start_time = time.time()
-        repay_df = get_repay_transactions(user_address, contract)
-        make_user_data_csv(repay_df)
-        # print(repay_df)
-        print('Repay Transactions found in: ', time.time() - start_time)
-        start_time = time.time()
-        collateralize_df = get_collateralalise_transactions(user_address, contract)
-        make_user_data_csv(collateralize_df)
-        # print(collateralize_df)
-        print('Collaterise Transactions found in: ', time.time() - start_time)
-
-        # properly redoes our collateralizes
-        handle_gateway_collateralise()
-
-        # df_list = [borrow_df, lend_df, repay_df, collateralize_df]
-
-        df_list = [lend_df]
-
-        df = pd.concat(df_list)
-    
-    # print(df)
-
-    return df
 
 # formats our dataframe response
 def make_api_response_string(df):
     
     data = []
 
+    quest_complete = 'False'
+
     #if we have an address with no transactions
     if len(df) < 1:
-        temp_df = pd.DataFrame()
-        data.append({
-           "txHash": 'N/A',
-            "timestamp": -1,
-            "tokenAddress": 'N/A',
-            "tokenVolume": '-1',
-            "tokenUSDAmount": -1,
-            "lendBorrowType": 'N/A'
-        })
+        quest_complete = 'False'
 
     else:
-        temp_df = df[['txHash', 'timestamp', 'tokenAddress', 'tokenVolume', 'tokenUSDAmount', 'lendBorrowType']]
-        # Process data
-        for i in range(temp_df.shape[0]):
-            row = temp_df.iloc[i]
-            data.append({
-                "txHash": str(row['txHash']),
-                "timestamp": int(row['timestamp']),
-                "tokenAddress": str(row['tokenAddress']),
-                "tokenVolume": str(row['tokenVolume']),
-                "tokenUSDAmount": float(row['tokenUSDAmount']),
-                "lendBorrowType": str(row['lendBorrowType'])
-            })
+        quest_complete = 'True'
 
     # Create JSON response
     response = {
-        "error": {
-            "code": 0,
-            "message": "success"
-        },
+        # "error": {
+        #     "code": 0,
+        #     "message": "success"
+        # },
         "data": {
-            "result": data
+            "result": quest_complete
         }
     }
     
     return response
 
-# executes all of functions
-def search_and_respond(address, queue):
-
-    df = get_all_user_transactions(address)
+# formats our dataframe response
+def make_api_response_string_2(df, quest_completed_number):
     
+    data = []
+
+    quest_complete = False
+
+    # safeguard incase the wrong quest_number is shared
+    if quest_completed_number == -1:
+        quest_complete = False
+
+    #if we have an address with no transactions
+    if len(df) < 1 or quest_completed_number == 0:
+        quest_complete = False
+
+    elif len(df) > 0 and quest_completed_number == 1:
+        quest_complete = True
+    
+    else:
+        quest_complete = False
+
+    # Create JSON response
+    response = {
+        # "error": {
+        #     "code": 0,
+        #     "message": "success"
+        # },
+        "data": {
+            "result": quest_complete
+        }
+    }
+    
+    return response
+
+# reads csv for twitter kids
+def search_and_respond(twitter_id, queue):
+
+    df = pd.read_csv('twitter_users.csv')
+
+    df = df.loc[df['follower_id'] == twitter_id]
+
     response = make_api_response_string(df)
 
     queue.put(response)
 
-    queue.join()
-
-    make_user_data_csv(df)
-    # return response
-
-#just reads from csv file
+# just reads from csv file
 def search_and_respond_2(address, queue):
     
-    df = pd.read_csv('all_events.csv')
+    df = pd.read_csv('user_transactions.csv')
 
     df = df.loc[df['wallet_address'] == address]
 
@@ -555,58 +644,97 @@ def search_and_respond_2(address, queue):
 
     queue.put(response)
 
-    #new_df = get_all_user_transactions(address)
+# reads from csv and makes our relevant df
+def search_and_respond_3(address, queue, quest_number):
 
-    #make_user_data_csv(new_df)
+    # # default quest
+    quest_column = 'q_made_transaction'
+    
+    if quest_number == 0:
+        quest_column = 'q_made_transaction'
+    elif quest_number == 1:
+        quest_column = '10_zen_deposited'
+    elif quest_number == 2:
+        quest_column = '001_wbtc_deposited'
+    elif quest_number == 3:
+        quest_column = '25_usdc_borrowed'
+    elif quest_number == 4:
+        quest_column = '02_weth_borrowed'
+    elif quest_number == 5:
+        quest_column = 'user_borrowed'
 
-#makes a dataframe and stores it in a csv file
-def make_user_data_csv(df):
-    old_df = pd.read_csv('all_events.csv')
-    old_df = old_df.drop_duplicates(subset=['wallet_address', 'txHash', 'lendBorrowType'], keep='last')
+    else:
+        quest_number = -1
 
-    combined_df_list = [df, old_df]
-    combined_df = pd.concat(combined_df_list)
-    combined_df = combined_df.drop_duplicates(subset=['wallet_address', 'txHash', 'lendBorrowType'], keep='last')
+    df = read_from_cloud_storage('user_transactions.csv')
+    
+    # df = pd.read_csv('user_transactions.csv')
 
-    combined_df['txHash'] = combined_df['txHash'].str.lower()
-    combined_df['tokenAddress'] = combined_df['tokenAddress'].str.lower()
+    df = df.loc[df['wallet_address'] == address]
+    # df = df.loc[df[quest_column] == address]
+    
 
-    # print(df)
-    # print(len(old_df), len(df), len(combined_df))
-    if len(combined_df) >= len(old_df):
-        combined_df.to_csv('all_events.csv', index=False)
-        print('CSV Made')
-    return
+    # # number to track whether the user completed the quest or not
+    # # if we don't have a record for the user, we will assume they haven't completed the quest
+    if len(df) > 0 and quest_number != -1:
+        quest_completed_number = int(df[quest_column].max())
+    else:
+        quest_completed_number = 0
 
-#gets rid of weth_gateway_collateralizes
-# adds a collateral row for each lend row for users who have borrowed something
-# removes duplicates
-def handle_gateway_collateralise():
-    df = pd.read_csv('all_events.csv')
-    df['wallet_address'] = df['wallet_address'].str.lower()
-    df['txHash'] = df['txHash'].str.lower()
+    response = make_api_response_string_2(df, quest_completed_number)
 
-    df = df[df.wallet_address != '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995']
+    queue.put(response)
 
-    lend_df = df.loc[df['lendBorrowType'] == 'LEND']
+# # will update our user_transactions.csv periodically
+# # updates if 15 minutes has passed since the last update
+def cooldown_handler():
 
-    borrow_df = df.loc[df['lendBorrowType'] == 'BORROW']
+    df = read_from_cloud_storage('user_transactions.csv')
+    print('Read Timestamp: ', df['next_update_timestamp'].iloc[0])
+    
+    df['next_update_timestamp'] = df['next_update_timestamp'].fillna(0)
 
-    borrower_wallet_list = borrow_df['wallet_address'].tolist()
+    current_timestamp = time.time()
 
-    #gives us only wallet addresses that have borrowed something
-    #this means that the user should have 'collateralized' some of their assets to begin with
-    lend_df = lend_df[lend_df['wallet_address'].isin(borrower_wallet_list)]
+    # cooldown_df = pd.read_csv('cooldown.csv')
 
-    collateralize_df = lend_df
+    # reads our google cloud storage bucket
+    cooldown_df = df
 
-    collateralize_df['tokenVolume'] = '0'
-    collateralize_df['tokenUSDAmount'] = 0
-    collateralize_df['lendBorrowType'] = 'COLLATERALISE'
+    next_update = cooldown_df['next_update_timestamp'].iloc[0]
 
-    make_user_data_csv(collateralize_df)
+    #change me
+    next_update = 0
 
-    return
+    if current_timestamp >= next_update:
+        print('updating csvs')
+    # if current_timestamp > 0:
+        datetime_obj = datetime.datetime.fromtimestamp(current_timestamp)
+        fifteen_minutes_later = datetime_obj + datetime.timedelta(minutes=15)
+
+        fifteen_minutes_later = int(fifteen_minutes_later.timestamp())
+
+        cooldown_df['next_update_timestamp'] = fifteen_minutes_later
+        
+        # updates our cloud storage bucket csv
+        df_write_to_cloud_storage(cooldown_df, 'user_transactions.csv')
+
+        # cooldown_df.to_csv('cooldown.csv')
+        # Print the original and adjusted timestamps
+        # print("Original timestamp:", next_update)
+        # print("Timestamp 15 minutes later:", fifteen_minutes_later)
+
+        find_all_transactions()
+    else:
+        print('no update needed yet')
+    return current_timestamp
+
+# cooldown_handler()
+# print('')
+# df = pd.read_csv('user_transactions.csv')
+# df_write_to_cloud_storage(df, 'user_transactions.csv')
+
+# print()
 
 #reads from csv
 @app.route("/transactions/", methods=["POST"])
@@ -615,41 +743,163 @@ def get_transactions():
     data = json.loads(request.data)  # Parse JSON string into JSON object
 
     print(data)
-    address = data['address']
-    address = address.lower()
-    print(address)
+
+    #used to help determine if we received an address or a twitter profile
+    is_address = True
+
+    if "address" in data:
+        address = data["address"].lower()
+        quest_number = int(data["quest_number"])
+        response = "Address Sent"
+        print("Address Sent")
+        is_address = True
+    
 
     # Create a queue to store the search result
     result_queue = queue.Queue()
 
-    thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
-    thread.start()
+    # search_and_respond_2(address, result_queue)
+    if is_address == True:
+        # thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
+        thread = threading.Thread(target=search_and_respond_3, args=(address, result_queue, quest_number))
+        thread.start()
     
+    # else:
+    #     thread = threading.Thread(target=search_and_respond, args=(twitter, result_queue))
+    #     thread.start()
     response = result_queue.get()
 
     return jsonify(response), 200
 
-#get v3
-#makes our csv
+# will be used to get our quest specific data
+# returns a response
+def get_quest_response(quest_number):
+
+    data = json.loads(request.data)  # Parse JSON string into JSON object
+
+    print(data)
+
+    #used to help determine if we received an address or a twitter profile
+    is_address = True
+
+    if "address" in data:
+        address = data["address"].lower()
+        response = "Address Sent"
+        print("Address Sent")
+        is_address = True
+
+
+    # Create a queue to store the search result
+    result_queue = queue.Queue()
+
+    # search_and_respond_2(address, result_queue)
+    if is_address == True:
+        # thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
+        thread = threading.Thread(target=search_and_respond_3, args=(address, result_queue, quest_number))
+        thread.start()
+
+    response = result_queue.get()
+
+    return response
+
+#reads from csv for quest0
+@app.route("/quest0/", methods=["POST"])
+def get_quest_0():
+
+    quest_number = 0
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest1
+@app.route("/quest1/", methods=["POST"])
+def get_quest_1():
+
+    quest_number = 1
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest2
+@app.route("/quest2/", methods=["POST"])
+def get_quest_2():
+
+    quest_number = 2
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest3
+@app.route("/quest3/", methods=["POST"])
+def get_quest_3():
+
+    quest_number = 3
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest4
+@app.route("/quest4/", methods=["POST"])
+def get_quest_4():
+
+    quest_number = 4
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+#reads from csv for quest5
+@app.route("/quest5/", methods=["POST"])
+def get_quest_5():
+
+    quest_number = 5
+    response = get_quest_response(quest_number)
+    
+    return jsonify(response), 200
+
+# simple endpoint that will see if our csvs need updates
 @app.route("/test/<address>", methods=["GET"])
 def balance_of(address):
     
-    address = address.lower()
+    # df = read_from_cloud_storage('user_transactions.csv')
 
-    df = get_all_user_transactions(address)
+    # # will check to see if our data csvs need to be updated
+    # # based off a 15 minute interval currently
+    # cooldown_handler(df)
 
-    response = make_api_response_string(df)
+    # cooldown_handler()
 
     # Create a queue to store the search result
     result_queue = queue.Queue()
 
-    thread = threading.Thread(target=search_and_respond, args=(address, result_queue))
+    thread = threading.Thread(target=cooldown_handler)
     thread.start()
     
-    response = result_queue.get()
+    response = {
+        # "error": {
+        #     "code": 0,
+        #     "message": "success"
+        # },
+        "data": {
+            "result": "completed"
+        }
+    }
+    # response = result_queue.get()
 
     return jsonify(response), 200
 
+# if __name__ == "__main__":
+#     app.run()
 
-if __name__ == "__main__":
-    app.run()
+
+find_all_transactions()
+# # updates our google cloud csv with our missing column
+# df = read_from_cloud_storage('user_transactions.csv')
+
+# df['user_borrowed'] = df['q_made_transaction']
+# df['user_borrowed'] = 0
+
+# df_write_to_cloud_storage(df, 'user_transactions.csv')
+
+# get_all_gateway_transactions()
+# df = find_all_transactions()
+# print(df)
