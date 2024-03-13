@@ -196,9 +196,39 @@ def get_linea_events(contract):
     from_block = latest_block - 500
 
     # events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
-    events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
+    events = contract.events.Withdraw.get_logs(fromBlock=from_block, toBlock=latest_block)
     
     print(events)
+
+    return events
+
+# # takes in a contract object and returns all associated deposit events
+def get_deposit_events(contract, from_block, to_block):
+
+    # events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
+    events = contract.events.Deposit.get_logs(fromBlock=from_block, toBlock=to_block)
+
+    return events
+
+# # takes in a contract object and returns all associated withdrawal events
+def get_withdraw_events(contract, from_block, to_block):
+
+    # events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
+    events = contract.events.Withdraw.get_logs(fromBlock=from_block, toBlock=to_block)
+
+    return events
+
+# # takes in a contract object and returns all associated borrow events
+def get_borrow_events(contract, from_block, to_block):
+
+    # events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
+    events = contract.events.Borrow.get_logs(fromBlock=from_block, toBlock=to_block)
+
+    return events
+
+# # takes in a contract object and returns all associated repay events
+def get_repay_events(contract, from_block, to_block):
+    events = contract.events.Repay.get_logs(fromBlock=from_block, toBlock=to_block)
 
     return events
 
@@ -462,6 +492,113 @@ def get_transaction_data(events, reserve_df):
     
     return df
 
+#handles our weth_gateway events and returns the accurate user_address
+def handle_weth_gateway(event, enum_name):
+
+    payload_address = event['args']['user'].lower()
+
+    if payload_address.lower() == '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995'.lower():
+        if enum_name == 'LEND' or enum_name == 'BORROW':
+            user = 'onBehalfOf'
+            payload_address = event['args'][user].lower()
+    
+    return payload_address
+
+#makes our dataframe
+def user_data(events, enum_name):
+    
+    df = pd.DataFrame()
+
+    user_address_list = []
+    tx_hash_list = []
+    timestamp_list = []
+    token_address_list = []
+    token_volume_list = []
+    token_usd_amount_list = []
+    lend_borrow_type_list = []
+
+    user = ''
+
+    start_time = time.time()
+    i = 1
+    print(len(events))
+    for event in events:
+        print(i, '/', len(events))
+        i+=1
+        # if enum_name == 'REPAY':
+        #     user = 'user'
+        # elif enum_name == 'COLLATERALISE':
+        #     user = 'user'
+        # else:
+        #     user = 'user'
+
+        # block = web3.eth.get_block(event['blockNumber'])
+        # if block['timestamp'] >= 1701086400:
+        if enum_name != 'COLLATERALISE':
+            
+            exists_list = already_part_of_df(event, enum_name)
+
+            tx_hash = exists_list[0]
+            wallet_address = exists_list[1]
+            exists = exists_list[2]
+
+            if exists == False and len(wallet_address) < 2:
+                
+                #adds wallet_address if it doesn't exist
+                if len(wallet_address) < 2:
+                    wallet_address = handle_weth_gateway(event, enum_name)
+                
+
+                block = web3.eth.get_block(event['blockNumber'])
+
+                user_address_list.append(wallet_address)
+                tx_hash_list.append(tx_hash)
+                timestamp_list.append(block['timestamp'])
+                token_address = event['args']['reserve']
+                token_address_list.append(token_address)
+                token_volume = event['args']['amount']
+                token_volume_list.append(token_volume)
+                token_usd_amount_list.append(get_tx_usd_amount(token_address, token_volume))
+                lend_borrow_type_list.append(enum_name)
+            
+            else:
+                print('Skipped')
+
+        else:
+            exists_list = already_part_of_df(event, enum_name)
+
+            tx_hash = exists_list[0]
+            wallet_address = exists_list[1]
+            exists = exists_list[2]
+            
+            if exists == False and len(wallet_address) < 2:
+                
+                wallet_address = handle_weth_gateway(event, enum_name)
+
+                block = web3.eth.get_block(event['blockNumber'])
+
+                user_address_list.append(wallet_address)
+                tx_hash_list.append(tx_hash)
+                timestamp_list.append(block['timestamp'])
+                token_address_list.append(event['args']['reserve'])
+                token_volume_list.append(0)
+                token_usd_amount_list.append(0)
+                lend_borrow_type_list.append(enum_name)
+            
+            else:
+                print('Skipped')
+
+    df['wallet_address'] = user_address_list
+    df['txHash'] = tx_hash_list
+    df['timestamp'] = timestamp_list
+    df['tokenAddress'] = token_address_list
+    df['tokenVolume'] = token_volume_list
+    df['tokenUSDAmount'] = token_usd_amount_list
+    df['lendBorrowType'] = lend_borrow_type_list
+
+    print('User Data Event Looping done in: ', time.time() - start_time)
+    return df
+
 # # runs all our looks
 # # updates our csv
 def find_all_transactions():
@@ -481,19 +618,36 @@ def find_all_transactions():
 
     contract = get_contract()
 
-    for reserve_address in reserve_address_list:
+    latest_block = web3.eth.get_block('latest')
+    latest_block = int(latest_block['number'])
 
-        # if reserve_address in a_token_list:
-        #     contract = get_a_token_contract(reserve_address)
-        # else:
-        #     contract = get_v_token_contract(reserve_address)
+    from_block = FROM_BLOCK
+    
+    from_block = 2868638
 
-        events = get_linea_events(contract)
+    to_block = from_block + 955
+
+    while to_block < latest_block:
+        deposit_events = get_deposit_events(contract, from_block, to_block)
+        withdraw_events = get_withdraw_events(contract, from_block, to_block)
+        borrow_events = get_borrow_events(contract, from_block, to_block)
+        repay_events = get_repay_events(contract, from_block, to_block)
+
+        from_block += 955
+        to_block += 955
+
+        print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block)
+
+        time.sleep(1.5)
+
+        if from_block >= latest_block:
+            from_block = latest_block - 1
         
-        try:
-            df = get_transaction_data(events, reserve_df)
-        except:
-            print(reserve_address, 'failed')
+        if to_block >= latest_block:
+            to_block = latest_block
+
+
+    
     
     return df
 
