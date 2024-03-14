@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
+from web3.middleware import geth_poa_middleware 
 import pandas as pd
 import json
 from functools import cache
@@ -30,7 +30,8 @@ from io import BytesIO
 app = Flask(__name__)
 
 # Replace with the actual Optimism RPC URL
-optimism_rpc_url = 'https://linea.blockpi.network/v1/rpc/public'
+# optimism_rpc_url = 'https://linea.blockpi.network/v1/rpc/public'
+optimism_rpc_url = ''
 
 # Create a Web3 instance to connect to the Optimism blockchain
 web3 = Web3(Web3.HTTPProvider(optimism_rpc_url))
@@ -39,7 +40,8 @@ web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 # LATEST_BLOCK = web3.eth.get_block_number()
 LATEST_BLOCK = 951714 + 1
 #Lending pool founding block
-FROM_BLOCK = 758632
+# FROM_BLOCK = 758632
+FROM_BLOCK = 778064
 # FROM_BLOCK = 0
 
 # returns basic data about our reserves in a dataframe
@@ -85,6 +87,24 @@ def get_last_block_tracked():
 
 # print(get_last_block_tracked())
 
+def make_checksum_values(df):
+
+    lowered_tokenAddress_list = df['tokenAddress'].to_list()
+    lowered_wallet_address_list = df['wallet_address'].to_list()
+
+    # check_sum_tx_hash_list = [Web3.to_checksum_address(x) for x in lowered_tx_hash_list]
+
+    check_sum_wallet_address_list = [Web3.to_checksum_address(x) for x in lowered_wallet_address_list]
+    # print(check_sum_wallet_address_list)
+
+    check_sum_tokenAddress_list = [Web3.to_checksum_address(x) for x in lowered_tokenAddress_list]
+    # print(check_sum_tokenAddress_list)
+
+    df['wallet_address'] = check_sum_wallet_address_list
+    df['tokenAddress'] = check_sum_tokenAddress_list
+
+    return df
+
 #makes a dataframe and stores it in a csv file
 def make_user_data_csv(df):
     old_df = pd.read_csv('all_events.csv')
@@ -97,60 +117,16 @@ def make_user_data_csv(df):
     combined_df['txHash'] = combined_df['txHash'].str.lower()
     combined_df['tokenAddress'] = combined_df['tokenAddress'].str.lower()
 
+    # combined_df['txHash'] = Web3.to_checksum_address(combined_df['txHash'])
+    # combined_df['tokenAddress'] = Web3.to_checksum_address(combined_df['tokenAddress'])
+    # combined_df['wallet_address'] = Web3.to_checksum_address(combined_df['wallet_address'])
+
+    combined_df = make_checksum_values(combined_df)
     # print(df)
     # print(len(old_df), len(df), len(combined_df))
     if len(combined_df) >= len(old_df):
         combined_df.to_csv('all_events.csv', index=False)
         print('CSV Made')
-    return
-
-    
-
-# handles our csv writing
-def make_transactions_csv(df):
-
-    old_df = read_from_cloud_storage('user_transactions.csv')
-
-    # old_df = pd.read_csv('user_transactions.csv')
-
-    old_df = old_df.drop_duplicates(subset=['wallet_address','token_name','number_of_tokens','reserve_address','tx_hash','block_number'], keep='last')
-
-    combined_df_list = [df, old_df]
-
-    combined_df = pd.concat(combined_df_list)
-    combined_df = combined_df.drop_duplicates(subset=['wallet_address','token_name','number_of_tokens','reserve_address','tx_hash','block_number'], keep='last')
-
-    combined_df['tx_hash'] = combined_df['tx_hash'].str.lower()
-    combined_df['wallet_address'] = combined_df['wallet_address'].str.lower()
-
-    temp_df = df.loc[df['wallet_address'] == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower()]
-    temp_df = temp_df.loc[temp_df['token_name'] == 'v_usdc']
-
-    if len(temp_df) > 1:
-        print('df')
-        print(df)
-        print(df.dtypes)
-        print()
-        print('old_df')
-        print(old_df)
-        print(old_df.dtypes)
-        print('combined_df')
-        print(combined_df)
-        print(combined_df.dtypes)
-
-    if len(combined_df) >= len(old_df):
-        combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
-        combined_df['next_update_timestamp'] = int(combined_df['next_update_timestamp'].max())
-        df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
-        # combined_df.to_csv('user_transactions.csv', index=False)
-        # print('CSV Made')
-
-    # elif len(combined_df) > 0:
-    #     combined_df['last_block_number'] = int(combined_df['last_block_number'].max())
-    #     df_write_to_cloud_storage(combined_df, 'user_transactions.csv')
-        # combined_df.to_csv('user_transactions.csv', index=False)
-        # print('CSV Made')
-    
     return
 
 # # takes in an a_token address and returns it's contract object
@@ -168,23 +144,6 @@ def get_v_token_contract(contract_address):
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
     return contract
-
-# # takes in a contract object and returns all associated events
-def get_linea_events(contract):
-    
-    latest_block = web3.eth.get_block('latest')
-    latest_block = int(latest_block['number'])
-
-    latest_block = 2868629
-
-    from_block = latest_block - 500
-
-    # events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
-    events = contract.events.Withdraw.get_logs(fromBlock=from_block, toBlock=latest_block)
-    
-    print(events)
-
-    return events
 
 # # takes in a contract object and returns all associated deposit events
 def get_deposit_events(contract, from_block, to_block):
@@ -215,266 +174,6 @@ def get_repay_events(contract, from_block, to_block):
     events = contract.events.Repay.get_logs(fromBlock=from_block, toBlock=to_block)
 
     return events
-
-# # first quest that will add column to df and specify 0 as False and 1 as True
-def user_made_transaction(df):
-    df['user_made_transaction'] = 1
-    return df
-
-# # takes in our whole dataframe, wallet_address, reserve_address, minimum_tokens
-# # will return whether the user has a transaction for a certain token that passes that token's minimum transfer
-# # example: Can check whether a user has deposited 10 zen in one transaction
-def is_quest_completed(df, wallet_address, reserve_address, minimum_tokens):
-
-    df = df.loc[df['wallet_address'] == wallet_address]
-    df = df.loc[df['reserve_address'] == reserve_address]
-
-    is_completed = -1
-
-    if len(df) > 0:
-        tokens_transacted = df['number_of_tokens'].max()
-
-        if tokens_transacted >= minimum_tokens:
-            is_completed = 1
-        
-        else:
-            is_completed = 0
-    
-    else:
-        is_completed = 0
-
-    return int(is_completed)
-
-# # Second quest that will add column to df and specify 0 as False and 1 as True
-# # User deposited 10 Zen in one transaction
-def user_deposited_10_zen(df):
-
-    reserve_address = '0xeb329420fae03176ec5877c34e2c38580d85e069'
-    minimum_tokens = 10
-    quest_name = '10_zen_deposited'
-
-
-    wallet_address_list = df['wallet_address'].tolist()
-
-    completed_list = []
-
-    for wallet_address in wallet_address_list:
-        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
-        completed_list.append(is_completed)
-
-    df[quest_name] = completed_list
-
-    return df
-
-# # Third quest that will add column to df and specify 0 as False and 1 as True
-# # User deposited 0.001 wbtc in one transaction
-def user_deposited_001_wbtc(df):
-
-    reserve_address = '0x770d3ed41f9f57ebb0463bd435df7fcc6f1e40ce'
-    minimum_tokens = 0.001
-    quest_name = '001_wbtc_deposited'
-
-
-    wallet_address_list = df['wallet_address'].tolist()
-
-    completed_list = []
-
-    for wallet_address in wallet_address_list:
-        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
-        completed_list.append(is_completed)
-
-    df[quest_name] = completed_list
-
-    return df
-
-# # 4th quest that will add column to df and specify 0 as False and 1 as True
-# # User borrowed 25usdc in one transaction
-def user_borrowed_25_usdc(df):
-
-    reserve_address = '0x1d6492faacb1ea15641dd94fb9ab020056abbc94'
-    minimum_tokens = 25
-    quest_name = '25_usdc_borrowed'
-
-    wallet_address_list = df['wallet_address'].tolist()
-
-    completed_list = []
-
-    for wallet_address in wallet_address_list:
-        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
-        completed_list.append(is_completed)
-
-    df[quest_name] = completed_list
-
-    return df
-
-# # 5th quest that will add column to df and specify 0 as False and 1 as True
-# # User borrowed 02 weth in one transaction
-def user_borrowed_02_weth(df):
-
-    reserve_address = '0x3f8f2929a2a461d4b59575f132016348cf526f25'
-    minimum_tokens = 0.02
-    quest_name = '02_weth_borrowed'
-
-    wallet_address_list = df['wallet_address'].tolist()
-
-    completed_list = []
-
-    for wallet_address in wallet_address_list:
-        is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
-        completed_list.append(is_completed)
-
-    df[quest_name] = completed_list
-
-    return df
-
-#finds if our users have borrowed anything
-def user_borrowed_anything(df):
-
-    print('User Borrowed Df before updates')
-    print(df)
-    # df = read_from_cloud_storage('user_transactions.csv')
-
-    reserve_address_list = ['0x1d6492faacb1ea15641dd94fb9ab020056abbc94', '0x3f8f2929a2a461d4b59575f132016348cf526f25', '0xbe8afe7e442ffffe576b979d490c5adb7823c3c6', '0x6c29836be0dcd891c1c4ca77ff8f3a29e4a3fa5e']
-
-    wallet_address_list = df['wallet_address'].tolist()
-
-    minimum_tokens = 0.000000000000000001
-
-    quest_name = 'user_borrowed'
-
-    completed_list = []
-
-    for wallet_address in wallet_address_list:
-        is_completed = 0
-        found_a_borrow = False
-        for reserve_address in reserve_address_list:
-            is_completed = is_quest_completed(df, wallet_address, reserve_address, minimum_tokens)
-            if is_completed == 1:
-                found_a_borrow = True
-
-        if found_a_borrow == True:
-            completed_list.append(1)
-        
-        else:
-            completed_list.append(0)
-
-    
-    df[quest_name] = completed_list
-
-    print('User Borrowed Df after updates')
-    print(df)
-
-    return df
-
-
-    
-
-# # aggregate function to find the results of all of our quests
-# # returns a dataframe
-def find_5_quests(df):
-
-    print('Before 5 Quests Df')
-    print(df)
-
-    df = user_deposited_10_zen(df)
-    df = user_deposited_001_wbtc(df)
-    df = user_borrowed_25_usdc(df)
-    df = user_borrowed_02_weth(df)
-    df = user_borrowed_anything(df)
-
-    return df
-
-
-def make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list):
-    
-    # handles blank dataframes
-    if len(user_address_list) < 1:
-        df = read_from_cloud_storage('user_transactions.csv')
-        # df = pd.read_csv('user_transactions.csv')
-        df['last_block_number'] = int(max(all_block_list))
-
-    else:
-        df = pd.DataFrame()
-        df['wallet_address'] = user_address_list
-        df['token_name'] = token_name_list
-        df['number_of_tokens'] = token_amount_list
-        df['reserve_address'] = token_address_list
-        df['tx_hash'] = tx_hash_list
-        df['block_number'] = block_number_list
-
-        df['last_block_number'] = max(all_block_list)
-
-        df['q_made_transaction'] = made_transaction_list
-
-        df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']] = df[['wallet_address', 'token_name', 'reserve_address', 'tx_hash']].astype(str)
-    
-    
-    return df
-
-# # takes in an events object and returns a dataframe with relevent transaction output
-def get_transaction_data(events, reserve_df):
-
-    user_address_list = []
-    token_name_list = []
-    token_address_list = []
-    token_amount_list = []
-    block_number_list = []
-    tx_hash_list = []
-    
-    # our quest lists below
-    made_transaction_list = []
-
-    all_block_list = [0]
-
-    for event in events:
-        tx_from = event['args']['from'].lower()
-        tx_to = event['args']['to'].lower()
-
-        if tx_to == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower() or tx_from == '0x8e1F0DfE979c3Be8Cd0f4f652Cc491E846501238'.lower():
-            print('found you')
-        # print(event)
-
-        # if (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower()) and (tx_from == "0x0000000000000000000000000000000000000000" and tx_to != "0x54F7D603881d850A83ec29e2A1DD61e4D0b8D58A".lower()):
-        if len(tx_from) == 42 and len(tx_to) == 42:
-            token_address = event['address'].lower()
-            token_amount = event['args']['value']
-            temp_df = reserve_df.loc[reserve_df['reserve_address'] == token_address]
-
-            # get whole numbers of our token amount
-            token_amount = round(token_amount / temp_df['reserve_decimal'].iloc[0], 18)
-            token_name = temp_df['reserve_name'].iloc[0]
-            block_number = int(event['blockNumber'])
-
-            user_address_list.append(tx_to)
-            token_name_list.append(token_name)
-            token_address_list.append(token_address)
-            token_amount_list.append(token_amount)
-            block_number_list.append(block_number)
-
-            all_block_list.append(block_number)
-
-            tx_hash_list.append(event['transactionHash'].hex().lower())
-
-            if event['transactionHash'].hex().lower() == '0x2dbc3745eba9acf0f552ddfd8cbd9a0c2b9e85222ac22bb5caf475d7cb4caad2' and token_name == 'v_usdc':
-                print(event)
-                print('wowowowow')
-
-            made_transaction_list.append(int(1))
-        
-        elif tx_from == "0x0000000000000000000000000000000000000000" and tx_to == "0x0fdbD7BAB654B5444c96FCc4956B8DF9CcC508bE".lower():
-            print('WETH Gateway Transaction Found!')
-            print(event)
-
-    df = make_transaction_df(user_address_list, token_name_list, token_address_list, token_amount_list, block_number_list, tx_hash_list,all_block_list, made_transaction_list)
-    print('Transaction DF')
-    print(df[['wallet_address', 'token_name', 'number_of_tokens', 'tx_hash']])
-
-    df = find_5_quests(df)
-    print(df)
-    # # makes our dataframe
-    make_transactions_csv(df)
-    
-    return df
 
 #handles our weth_gateway events and returns the accurate user_address
 def handle_weth_gateway(event, enum_name):
@@ -589,14 +288,15 @@ def user_data(events, enum_name):
     token_volume_list = []
     token_usd_amount_list = []
     lend_borrow_type_list = []
+    block_list = []
 
     user = ''
 
     start_time = time.time()
     i = 1
-    print(len(events))
     for event in events:
-        print(i, '/', len(events))
+        # time.sleep(0.25)
+        print('Batch of Events Processed: ', i, '/', len(events))
         i+=1
         # if enum_name == 'REPAY':
         #     user = 'user'
@@ -623,6 +323,8 @@ def user_data(events, enum_name):
                 
 
                 block = web3.eth.get_block(event['blockNumber'])
+                block_number = int(block['number'])
+                block_list.append(block_number)
 
                 user_address_list.append(wallet_address)
                 tx_hash_list.append(tx_hash)
@@ -635,7 +337,7 @@ def user_data(events, enum_name):
                 lend_borrow_type_list.append(enum_name)
             
             else:
-                print('Skipped')
+                pass
 
         else:
             exists_list = already_part_of_df(event, enum_name)
@@ -649,6 +351,7 @@ def user_data(events, enum_name):
                 wallet_address = handle_weth_gateway(event, enum_name)
 
                 block = web3.eth.get_block(event['blockNumber'])
+                block_list.append(block)
 
                 user_address_list.append(wallet_address)
                 tx_hash_list.append(tx_hash)
@@ -659,7 +362,7 @@ def user_data(events, enum_name):
                 lend_borrow_type_list.append(enum_name)
             
             else:
-                print('Skipped')
+                pass
 
     df['wallet_address'] = user_address_list
     df['txHash'] = tx_hash_list
@@ -667,9 +370,10 @@ def user_data(events, enum_name):
     df['tokenAddress'] = token_address_list
     df['tokenVolume'] = token_volume_list
     df['tokenUSDAmount'] = token_usd_amount_list
+    df['blockNumber'] = block_list
     df['lendBorrowType'] = lend_borrow_type_list
 
-    print('User Data Event Looping done in: ', time.time() - start_time)
+    # print('User Data Event Looping done in: ', time.time() - start_time)
     return df
 
 # # runs all our looks
@@ -694,13 +398,24 @@ def find_all_transactions():
     latest_block = web3.eth.get_block('latest')
     latest_block = int(latest_block['number'])
 
-    from_block = FROM_BLOCK
+    event_df = pd.read_csv('all_events.csv')
     
-    from_block = 2869000
+    try:
+        from_block = int(max(event_df['blockNumber']))
+    except:
+        from_block = FROM_BLOCK
 
-    to_block = from_block + 955
+    # from_block = FROM_BLOCK
+    
+    # from_block = 2869000
+
+    # to_block = from_block + 955
+    to_block = from_block + 9555
 
     while to_block < latest_block:
+
+        print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block)
+
         deposit_events = get_deposit_events(contract, from_block, to_block)
         withdraw_events = get_withdraw_events(contract, from_block, to_block)
         borrow_events = get_borrow_events(contract, from_block, to_block)
@@ -722,13 +437,12 @@ def find_all_transactions():
             repay_df = user_data(repay_events, 'REPAY')
             make_user_data_csv(repay_df)
 
-        from_block += 955
-        to_block += 955
+        from_block += 9555
+        to_block += 9555
 
-        print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block)
-        print(deposit_events)
+        # print(deposit_events)
 
-        time.sleep(1.5)
+        # time.sleep(2.5)
 
         if from_block >= latest_block:
             from_block = latest_block - 1
@@ -769,8 +483,8 @@ def get_all_gateway_transactions():
 
         for tx_hash in tx_hashes:
             transaction = web3.eth.get_transaction(tx_hash)
-            print(transaction)
-            print('')
+            # print(transaction)
+            # print('')
             if transaction['to'] == weth_gateway_address:
                # print(transaction)
                 user_address_list.append(transaction['from'])
@@ -799,348 +513,13 @@ def get_all_gateway_transactions():
 
     make_user_data_csv(df)
 
-# get_all_gateway_transactions()
-
-
-# formats our dataframe response
-def make_api_response_string(df):
-    
-    data = []
-
-    quest_complete = 'False'
-
-    #if we have an address with no transactions
-    if len(df) < 1:
-        quest_complete = 'False'
-
-    else:
-        quest_complete = 'True'
-
-    # Create JSON response
-    response = {
-        # "error": {
-        #     "code": 0,
-        #     "message": "success"
-        # },
-        "data": {
-            "result": quest_complete
-        }
-    }
-    
-    return response
-
-# formats our dataframe response
-def make_api_response_string_2(df, quest_completed_number):
-    
-    data = []
-
-    quest_complete = False
-
-    # safeguard incase the wrong quest_number is shared
-    if quest_completed_number == -1:
-        quest_complete = False
-
-    #if we have an address with no transactions
-    if len(df) < 1 or quest_completed_number == 0:
-        quest_complete = False
-
-    elif len(df) > 0 and quest_completed_number == 1:
-        quest_complete = True
-    
-    else:
-        quest_complete = False
-
-    # Create JSON response
-    response = {
-        # "error": {
-        #     "code": 0,
-        #     "message": "success"
-        # },
-        "data": {
-            "result": quest_complete
-        }
-    }
-    
-    return response
-
-# reads csv for twitter kids
-def search_and_respond(twitter_id, queue):
-
-    df = pd.read_csv('twitter_users.csv')
-
-    df = df.loc[df['follower_id'] == twitter_id]
-
-    response = make_api_response_string(df)
-
-    queue.put(response)
-
-# just reads from csv file
-def search_and_respond_2(address, queue):
-    
-    df = pd.read_csv('user_transactions.csv')
-
-    df = df.loc[df['wallet_address'] == address]
-
-    response = make_api_response_string(df)
-
-    queue.put(response)
-
-# reads from csv and makes our relevant df
-def search_and_respond_3(address, queue, quest_number):
-
-    # # default quest
-    quest_column = 'q_made_transaction'
-    
-    if quest_number == 0:
-        quest_column = 'q_made_transaction'
-    elif quest_number == 1:
-        quest_column = '10_zen_deposited'
-    elif quest_number == 2:
-        quest_column = '001_wbtc_deposited'
-    elif quest_number == 3:
-        quest_column = '25_usdc_borrowed'
-    elif quest_number == 4:
-        quest_column = '02_weth_borrowed'
-    elif quest_number == 5:
-        quest_column = 'user_borrowed'
-
-    else:
-        quest_number = -1
-
-    df = read_from_cloud_storage('user_transactions.csv')
-    
-    # df = pd.read_csv('user_transactions.csv')
-
-    df = df.loc[df['wallet_address'] == address]
-    # df = df.loc[df[quest_column] == address]
-    
-
-    # # number to track whether the user completed the quest or not
-    # # if we don't have a record for the user, we will assume they haven't completed the quest
-    if len(df) > 0 and quest_number != -1:
-        quest_completed_number = int(df[quest_column].max())
-    else:
-        quest_completed_number = 0
-
-    response = make_api_response_string_2(df, quest_completed_number)
-
-    queue.put(response)
-
-# # will update our user_transactions.csv periodically
-# # updates if 15 minutes has passed since the last update
-def cooldown_handler():
-
-    df = read_from_cloud_storage('user_transactions.csv')
-    print('Read Timestamp: ', df['next_update_timestamp'].iloc[0])
-    
-    df['next_update_timestamp'] = df['next_update_timestamp'].fillna(0)
-
-    current_timestamp = time.time()
-
-    # cooldown_df = pd.read_csv('cooldown.csv')
-
-    # reads our google cloud storage bucket
-    cooldown_df = df
-
-    next_update = cooldown_df['next_update_timestamp'].iloc[0]
-
-    #change me
-    next_update = 0
-
-    if current_timestamp >= next_update:
-        print('updating csvs')
-    # if current_timestamp > 0:
-        datetime_obj = datetime.datetime.fromtimestamp(current_timestamp)
-        fifteen_minutes_later = datetime_obj + datetime.timedelta(minutes=15)
-
-        fifteen_minutes_later = int(fifteen_minutes_later.timestamp())
-
-        cooldown_df['next_update_timestamp'] = fifteen_minutes_later
-        
-        # updates our cloud storage bucket csv
-        df_write_to_cloud_storage(cooldown_df, 'user_transactions.csv')
-
-        # cooldown_df.to_csv('cooldown.csv')
-        # Print the original and adjusted timestamps
-        # print("Original timestamp:", next_update)
-        # print("Timestamp 15 minutes later:", fifteen_minutes_later)
-
-        find_all_transactions()
-    else:
-        print('no update needed yet')
-    return current_timestamp
-
-# cooldown_handler()
-# print('')
-# df = pd.read_csv('user_transactions.csv')
-# df_write_to_cloud_storage(df, 'user_transactions.csv')
-
-# print()
-
-#reads from csv
-@app.route("/transactions/", methods=["POST"])
-def get_transactions():
-
-    data = json.loads(request.data)  # Parse JSON string into JSON object
-
-    print(data)
-
-    #used to help determine if we received an address or a twitter profile
-    is_address = True
-
-    if "address" in data:
-        address = data["address"].lower()
-        quest_number = int(data["quest_number"])
-        response = "Address Sent"
-        print("Address Sent")
-        is_address = True
-    
-
-    # Create a queue to store the search result
-    result_queue = queue.Queue()
-
-    # search_and_respond_2(address, result_queue)
-    if is_address == True:
-        # thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
-        thread = threading.Thread(target=search_and_respond_3, args=(address, result_queue, quest_number))
-        thread.start()
-    
-    # else:
-    #     thread = threading.Thread(target=search_and_respond, args=(twitter, result_queue))
-    #     thread.start()
-    response = result_queue.get()
-
-    return jsonify(response), 200
-
-# will be used to get our quest specific data
-# returns a response
-def get_quest_response(quest_number):
-
-    data = json.loads(request.data)  # Parse JSON string into JSON object
-
-    print(data)
-
-    #used to help determine if we received an address or a twitter profile
-    is_address = True
-
-    if "address" in data:
-        address = data["address"].lower()
-        response = "Address Sent"
-        print("Address Sent")
-        is_address = True
-
-
-    # Create a queue to store the search result
-    result_queue = queue.Queue()
-
-    # search_and_respond_2(address, result_queue)
-    if is_address == True:
-        # thread = threading.Thread(target=search_and_respond_2, args=(address, result_queue))
-        thread = threading.Thread(target=search_and_respond_3, args=(address, result_queue, quest_number))
-        thread.start()
-
-    response = result_queue.get()
-
-    return response
-
-#reads from csv for quest0
-@app.route("/quest0/", methods=["POST"])
-def get_quest_0():
-
-    quest_number = 0
-    response = get_quest_response(quest_number)
-    
-    return jsonify(response), 200
-
-#reads from csv for quest1
-@app.route("/quest1/", methods=["POST"])
-def get_quest_1():
-
-    quest_number = 1
-    response = get_quest_response(quest_number)
-    
-    return jsonify(response), 200
-
-#reads from csv for quest2
-@app.route("/quest2/", methods=["POST"])
-def get_quest_2():
-
-    quest_number = 2
-    response = get_quest_response(quest_number)
-    
-    return jsonify(response), 200
-
-#reads from csv for quest3
-@app.route("/quest3/", methods=["POST"])
-def get_quest_3():
-
-    quest_number = 3
-    response = get_quest_response(quest_number)
-    
-    return jsonify(response), 200
-
-#reads from csv for quest4
-@app.route("/quest4/", methods=["POST"])
-def get_quest_4():
-
-    quest_number = 4
-    response = get_quest_response(quest_number)
-    
-    return jsonify(response), 200
-
-#reads from csv for quest5
-@app.route("/quest5/", methods=["POST"])
-def get_quest_5():
-
-    quest_number = 5
-    response = get_quest_response(quest_number)
-    
-    return jsonify(response), 200
-
-# simple endpoint that will see if our csvs need updates
-@app.route("/test/<address>", methods=["GET"])
-def balance_of(address):
-    
-    # df = read_from_cloud_storage('user_transactions.csv')
-
-    # # will check to see if our data csvs need to be updated
-    # # based off a 15 minute interval currently
-    # cooldown_handler(df)
-
-    # cooldown_handler()
-
-    # Create a queue to store the search result
-    result_queue = queue.Queue()
-
-    thread = threading.Thread(target=cooldown_handler)
-    thread.start()
-    
-    response = {
-        # "error": {
-        #     "code": 0,
-        #     "message": "success"
-        # },
-        "data": {
-            "result": "completed"
-        }
-    }
-    # response = result_queue.get()
-
-    return jsonify(response), 200
 
 # if __name__ == "__main__":
 #     app.run()
 
 
 find_all_transactions()
-# # updates our google cloud csv with our missing column
-# df = read_from_cloud_storage('user_transactions.csv')
-
-# df['user_borrowed'] = df['q_made_transaction']
-# df['user_borrowed'] = 0
-
-# df_write_to_cloud_storage(df, 'user_transactions.csv')
-
-# get_all_gateway_transactions()
-# df = find_all_transactions()
+    
+# df = pd.read_csv('all_events.csv')
+# df = make_checksum_values(df)
 # print(df)
