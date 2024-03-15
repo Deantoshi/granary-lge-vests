@@ -540,6 +540,8 @@ def find_rolling_lp_balance(df):
     print(calculated_df)
 
     calculated_df.to_csv('outputData.csv', index=False)
+
+    calculated_df.to_json('outputData.json', orient='records')
     return df
 
 find_all_transactions()
