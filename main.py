@@ -1,30 +1,14 @@
-from flask import Flask, request, jsonify
 from web3 import Web3
 from web3.middleware import geth_poa_middleware 
 import pandas as pd
-import json
-from functools import cache
-import threading 
-import queue
 import time
-import datetime
-from concurrent.futures import ThreadPoolExecutor
-# import gcs_updater
-from google.cloud import storage
-import google.cloud.storage
-import os
-import sys
-import io
-from io import BytesIO
-
-app = Flask(__name__)
 
 # Replace with the actual Optimism RPC URL
-optimism_rpc_url = 'https://linea.blockpi.network/v1/rpc/public'
-# optimism_rpc_url = ''
+rpc_url = 'https://linea.blockpi.network/v1/rpc/public'
+# # rpc_url = ''
 
 # Create a Web3 instance to connect to the Optimism blockchain
-web3 = Web3(Web3.HTTPProvider(optimism_rpc_url))
+web3 = Web3(Web3.HTTPProvider(rpc_url))
 web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
 # LATEST_BLOCK = web3.eth.get_block_number()
@@ -116,7 +100,7 @@ def make_user_data_csv(df):
     # print(len(old_df), len(df), len(combined_df))
     if len(combined_df) >= len(old_df):
         combined_df.to_csv('all_events.csv', index=False)
-        print('CSV Made')
+        print('Event CSV Updated')
     return
 
 # # takes in an a_token address and returns it's contract object
@@ -553,16 +537,10 @@ def find_rolling_lp_balance(df):
 
     print(calculated_df)
 
-    calculated_df.to_csv('calculated_balance.csv', index=False)
+    calculated_df.to_csv('outputData.csv', index=False)
     return df
-# if __name__ == "__main__":
-#     app.run()
+
+find_all_transactions()
 
 df = prep_balance_df()
 find_rolling_lp_balance(df)
-
-# find_all_transactions()
-    
-# df = pd.read_csv('all_events.csv')
-# df = make_checksum_values(df)
-# print(df)
