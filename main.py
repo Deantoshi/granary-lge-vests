@@ -519,7 +519,7 @@ def prep_balance_df():
     # print(df)
     return df
 
-# will calculate
+# calculates the rolling balances of lps
 def find_rolling_lp_balance(df):
 
     df['user'] = df['wallet_address']
@@ -533,6 +533,8 @@ def find_rolling_lp_balance(df):
     calculated_df = df[['user', 'pool', 'block', 'position', 'lpvalue']]
 
     calculated_df['lpvalue'] = df.groupby('user')['tokenUSDAmount'].transform(pd.Series.cumsum)
+
+    calculated_df = calculated_df.sort_values(by=['block'], ascending=False)
     calculated_df = calculated_df.reset_index(drop=True)
 
     print(calculated_df)
