@@ -17,21 +17,11 @@ import sys
 import io
 from io import BytesIO
 
-
-# # Borrow USDC tx: https://eon-explorer.horizenlabs.io/tx/0xa053e235cec7c46b7cc90c92d17abdaec1786b17230ed64835c2a76f2cf95acd
-# # Deposit USDC tx: https://eon-explorer.horizenlabs.io/tx/0xddcd860b32605a558e1e244ace4b970aab5b88c74449eb10e720b0d78af8253b
-# # Borrow BTC tx: https://eon-explorer.horizenlabs.io/tx/0xf6c930a259680c81b35738d9e1982cd9a0b2f5767920d6d0a5a526e912841fec
-# # Deposit BTC tx: https://eon-explorer.horizenlabs.io/tx/0x9be4cac88854d04f6ea10389bf9fcecad8aae7155905a501c13e037228377e19
-# # Borrow ETH tx: https://eon-explorer.horizenlabs.io/tx/0x28fd834d498c5ee3f5f4f8b00be6dcec876906e16e3870a5d51d693c2952dea9
-# # Deposit ETH tx: https://eon-explorer.horizenlabs.io/tx/0x164213e475b2a4c70325c3d75426c4aa0a9e0fe1b1eeb2b9a46c6c83e93a8796
-# # Deposit ZEN tx: https://eon-explorer.horizenlabs.io/tx/0x6cd3d731c1a46f238288abb9c5769b06336281225114e5d2c1a9a234781fa1e4
-# # Borrow ZEN tx: https://eon-explorer.horizenlabs.io/tx/0xb6acca9fabb43ee466a822aa6cb68dd89b52c6cb876ccd7bf554f5da7e049308
-
 app = Flask(__name__)
 
 # Replace with the actual Optimism RPC URL
-# optimism_rpc_url = 'https://linea.blockpi.network/v1/rpc/public'
-optimism_rpc_url = ''
+optimism_rpc_url = 'https://linea.blockpi.network/v1/rpc/public'
+# optimism_rpc_url = ''
 
 # Create a Web3 instance to connect to the Optimism blockchain
 web3 = Web3(Web3.HTTPProvider(optimism_rpc_url))
@@ -295,7 +285,7 @@ def user_data(events, enum_name):
     start_time = time.time()
     i = 1
     for event in events:
-        # time.sleep(0.25)
+        time.sleep(0.25)
         print('Batch of Events Processed: ', i, '/', len(events))
         i+=1
         # if enum_name == 'REPAY':
@@ -410,7 +400,7 @@ def find_all_transactions():
     # from_block = 2869000
 
     # to_block = from_block + 955
-    to_block = from_block + 9555
+    to_block = from_block + 955
 
     while to_block < latest_block:
 
@@ -437,12 +427,12 @@ def find_all_transactions():
             repay_df = user_data(repay_events, 'REPAY')
             make_user_data_csv(repay_df)
 
-        from_block += 9555
-        to_block += 9555
+        from_block += 955
+        to_block += 955
 
         # print(deposit_events)
 
-        # time.sleep(2.5)
+        time.sleep(2.5)
 
         if from_block >= latest_block:
             from_block = latest_block - 1
@@ -513,12 +503,65 @@ def get_all_gateway_transactions():
 
     make_user_data_csv(df)
 
+# # makes deposits and borrows positive numbers
+# # makes withdrawals and repays as negative numbers
+def prep_balance_df():
 
+    df_list = []
+
+    df = pd.read_csv('all_events.csv')
+
+    deposit_df = df.loc[df['lendBorrowType'] == 'DEPOSIT']
+
+    withdraw_df = df.loc[df['lendBorrowType'] == 'WITHDRAW']
+    withdraw_df['tokenUSDAmount'] *= -1
+
+    borrow_df = df.loc[df['lendBorrowType'] == 'BORROW']
+
+    repay_df = df.loc[df['lendBorrowType'] == 'REPAY']
+    repay_df['tokenUSDAmount'] *= -1
+
+    df_list = [deposit_df, withdraw_df, borrow_df, repay_df]
+
+    df = pd.concat(df_list)
+
+    df['blockNumber'] = df['blockNumber'].astype(int)
+
+    # df['user'] = df['wallet_address']
+    # df['pool'] = '0x6997BA833148cA964ab51E4dF889b4b2a4Fc0B0d'
+    # df['position'] = 0
+    # df['lpvalue'] = 0
+
+    # print(df)
+    return df
+
+# will calculate
+def find_rolling_lp_balance(df):
+
+    df['user'] = df['wallet_address']
+    df['pool'] = '0x6997BA833148cA964ab51E4dF889b4b2a4Fc0B0d'
+    df['position'] = 0
+    df['lpvalue'] = 0
+    df['block'] = df['blockNumber']
+
+    df = df.sort_values(by=['blockNumber'])
+
+    calculated_df = df[['user', 'pool', 'block', 'position', 'lpvalue']]
+
+    calculated_df['lpvalue'] = df.groupby('user')['tokenUSDAmount'].transform(pd.Series.cumsum)
+    calculated_df = calculated_df.reset_index(drop=True)
+
+    print(calculated_df)
+
+    calculated_df.to_csv('calculated_balance.csv', index=False)
+    return df
 # if __name__ == "__main__":
 #     app.run()
 
+df = prep_balance_df()
+find_rolling_lp_balance(df)
 
-find_all_transactions()
+# find_all_transactions()
     
 # df = pd.read_csv('all_events.csv')
 # df = make_checksum_values(df)
