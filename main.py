@@ -17,6 +17,7 @@ LATEST_BLOCK = 951714 + 1
 # FROM_BLOCK = 758632
 FROM_BLOCK = 778064
 # FROM_BLOCK = 0
+TROVE_MANAGER_LIST = ['0x295c6074F090f85819cbC911266522e43A8e0f4A']
 
 # returns basic data about our reserves in a dataframe
 def get_reserve_data():
@@ -56,18 +57,6 @@ def get_redemption_events(contract, from_block, to_block):
     events = contract.events.Redemption.get_logs(fromBlock=from_block, toBlock=to_block)
 
     return events
-
-from_block = 61359924
-to_block = from_block + 1000
-
-contract_address = '0x295c6074F090f85819cbC911266522e43A8e0f4A'
-
-trove_manager_abi = get_trove_manager_contract_abi()
-contract = get_contract(contract_address, trove_manager_abi)
-
-redemption_events = get_redemption_events(contract, from_block, to_block)
-
-print(redemption_events)
 
 # gets the last block number we have gotten data from and returns this block number
 def get_last_block_tracked():
@@ -245,16 +234,18 @@ def already_part_of_df(event, enum):
 #gets how many decimals our reserve is
 def get_reserve_decimals(reserve_address):
     decimals = 0
-    if reserve_address == '0x4AF15ec2A0BD43Db75dd04E62FAA3B8EF36b00d5': # dai
+    if reserve_address == '0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8': # WMNT
         decimals = 1e18
-    elif reserve_address == '0x176211869cA2b568f2A7D4EE941E073a821EE1ff': # usdc
+    elif reserve_address == '0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9': # USDC
         decimals = 1e6
-    elif reserve_address == '0xA219439258ca9da29E9Cc4cE5596924745e12B93': # usdt
+    elif reserve_address == '0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE': # USDT
         decimals = 1e6
-    elif reserve_address == '0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f': # weth
+    elif reserve_address == '0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111': # WETH
         decimals = 1e18
-    elif reserve_address == '0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4': # wbtc
+    elif reserve_address == '0xCAbAE6f6Ea1ecaB08Ad02fE02ce9A44F09aebfA2': # WBTC
         decimals = 1e8
+    elif reserve_address == '0xcda86a272531e8640cd7f1a92c01839911b90bb0': # mETH
+        decimals = 1e18
     
     return decimals
 
@@ -271,18 +262,44 @@ def get_tx_usd_amount(reserve_address, token_amount):
     return usd_amount
 
 #makes our dataframe
-def user_data(events, enum_name):
+def user_data(events, contract_type):
     
     df = pd.DataFrame()
 
-    user_address_list = []
-    tx_hash_list = []
+    if contract_type == 0:
+        print('redemption_contract')
+    
+    redemption_number_list = []
     timestamp_list = []
-    token_address_list = []
-    token_volume_list = []
-    token_usd_amount_list = []
-    lend_borrow_type_list = []
-    block_list = []
+    tx_hash_list = []
+    transaction_list = []
+    redeemed_token_list = []
+    redeemed_collateral_per_trove_owner_usd_list = []
+    debt_repaid_per_trove_owner_usd_list = []
+    profit_or_loss_usd_list = []
+    number_of_redeemed_tokens_list = []
+    ern_debt_repaid_list = []
+    redemption_fee_usd_list = []
+    redemption_fee_tokens_list = []
+    redemption_fee_percent_list = []
+    trove_owner_list = []
+    block_number_list = []
+
+    df['redemption_number'] = redemption_number_list
+    df['timestamp'] = timestamp_list
+    df['tx_hash'] = tx_hash_list
+    df['transaction'] = transaction_list
+    df['redeemed_token'] = redeemed_token_list
+    df['redeemed_collateral_per_trove_owner_usd'] = redeemed_collateral_per_trove_owner_usd_list
+    df['debt_repaid_per_trove_owner_usd'] = debt_repaid_per_trove_owner_usd_list
+    df['profit_or_loss_usd'] = profit_or_loss_usd_list
+    df['number_of_redeemed_tokens'] = number_of_redeemed_tokens_list
+    df['ern_debt_repaid'] = ern_debt_repaid_list
+    df['redemption_fee_usd'] = redemption_fee_usd_list
+    df['redemption_fee_tokens'] = redemption_fee_tokens_list
+    df['redemption_fee_percent'] = redemption_fee_percent_list
+    df['trove_owner'] = trove_owner_list
+    df['block_number'] = block_number_list
 
     user = ''
 
@@ -372,64 +389,42 @@ def user_data(events, enum_name):
 
 # # runs all our looks
 # # updates our csv
-def find_all_transactions():
-    # # aZen
-    # contract_address = '0xEB329420Fae03176EC5877c34E2c38580D85E069' 
-    # # # vZen
-    # # contract_address = '0xBE8afE7E442fFfFE576B979D490c5ADb7823C3c6'
-    reserve_df = get_reserve_data()
+def find_all_transactions(contract_address):
 
-    # reserve_address_list = reserve_df['reserve_address'].tolist()
+    # -1 = default, 0 = troveManager
+    contract_type = -1
 
-    a_token_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28']
-    v_token_list = ['0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
+    from_block = 61359924
+    to_block = from_block + 1000
 
-    reserve_address_list = ['0x245B368d5a969179Df711774e7BdC5eC670e92EF', '0x5C4866349ff0Bf1e7C4b7f6d8bB2dBcbe76f8895', '0xa0f8323A84AdC89346eD3F7c5dcddf799916b51E', '0xB36535765A7421B397Cfd9fEc03cF96aA99C8D08', '0xdc66aC2336742E387b766B4c264c993ee6a3EF28',
-                    '0xd4c3692B753302Ef0Ef1d50dd7928D60ef00B9ff', '0x157903B7c6D759c9D3c65A675a15aA0723eea95B', '0x393a64Fc561D6c8f5D8D8c427005cAB66DfeCA9D', '0xd8A40a27dD36565cC2B17C8B937eE50B69209E22', '0x9576c6FDd82474177781330Fc47C38D89936E7c8']
+    if contract_address in TROVE_MANAGER_LIST:
+        contract_type = 0
+    
+    if contract_type == 0:
+        abi = get_trove_manager_contract_abi()
+        event_df = pd.read_csv('aurelius_redemption_events.csv')
 
-    contract = get_contract()
+    contract = get_contract(contract_address, abi)
 
     latest_block = web3.eth.get_block('latest')
     latest_block = int(latest_block['number'])
-
-    event_df = pd.read_csv('all_events.csv')
     
     try:
-        from_block = int(max(event_df['blockNumber']))
+        from_block = int(max(event_df['block_number']))
     except:
         from_block = FROM_BLOCK
 
-    # from_block = FROM_BLOCK
-    
-    # from_block = 2869000
-
-    # to_block = from_block + 955
     to_block = from_block + 955
 
     while to_block < latest_block:
 
         print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block)
+        if contract_type == 0:
+            events = get_redemption_events(contract, from_block, to_block)
 
-        deposit_events = get_deposit_events(contract, from_block, to_block)
-        withdraw_events = get_withdraw_events(contract, from_block, to_block)
-        borrow_events = get_borrow_events(contract, from_block, to_block)
-        repay_events = get_repay_events(contract, from_block, to_block)
-
-        if len(deposit_events) > 0:
-            deposit_df = user_data(deposit_events, 'DEPOSIT')
-            make_user_data_csv(deposit_df)
-
-        if len(withdraw_events) > 0:
-            withdraw_df = user_data(withdraw_events, 'WITHDRAW')
-            make_user_data_csv(withdraw_df)
-
-        if len(borrow_events) > 0:
-            borrow_df = user_data(borrow_events, 'BORROW')
-            make_user_data_csv(borrow_df)
-            
-        if len(repay_events) > 0:
-            repay_df = user_data(repay_events, 'REPAY')
-            make_user_data_csv(repay_df)
+        if len(events) > 0:
+            df = user_data(events)
+            make_user_data_csv(df)
 
         from_block += 955
         to_block += 955
@@ -564,7 +559,6 @@ def find_rolling_lp_balance(df):
     calculated_df.to_json('outputData.json', orient='records')
     return df
 
-find_all_transactions()
+contract_address = '0x295c6074F090f85819cbC911266522e43A8e0f4A'
 
-df = prep_balance_df()
-find_rolling_lp_balance(df)
+find_all_transactions(contract_address)
