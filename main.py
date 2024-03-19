@@ -159,14 +159,15 @@ def get_repay_events(contract, from_block, to_block):
     return events
 
 #handles our weth_gateway events and returns the accurate user_address
-def handle_weth_gateway(event, enum_name):
+def handle_weth_gateway(event, contract_type):
 
-    payload_address = event['args']['user'].lower()
+    if contract_type == 0:
+        payload_address = event['address']
 
-    if payload_address.lower() == '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995'.lower():
-        if enum_name == 'LEND' or enum_name == 'BORROW':
+    elif payload_address == '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995':
+        if contract_type == 2:
             user = 'onBehalfOf'
-            payload_address = event['args'][user].lower()
+            payload_address = event['args'][user]
     
     return payload_address
 
@@ -175,8 +176,8 @@ def tx_hash_exists(df, tx_hash):
 
     new_df = pd.DataFrame()
 
-    if ((df['txHash'] == tx_hash)).any():
-        new_df = df.loc[df['txHash'] == tx_hash]
+    if ((df['tx_hash'] == tx_hash)).any():
+        new_df = df.loc[df['tx_hash'] == tx_hash]
     
     return new_df
 
@@ -192,10 +193,16 @@ def lend_borrow_type_exists(df, lend_borrow_type):
     return df
 
 #returns df if wallet_address exists
-def wallet_address_exists(df, wallet_address):
+def wallet_address_exists(df, wallet_address, contract_type):
 
-    if ((df['wallet_address'] == wallet_address)).any():
-        df = df.loc[df['wallet_address'] == wallet_address]
+    if contract_type == 0:
+        wallet_address_column_name = 'liquidator_address'
+    
+    elif contract_type == 1:
+        wallet_address_column_name = 'trove_owner'
+
+    if ((df[wallet_address_column_name] == wallet_address)).any():
+        df = df.loc[df[wallet_address_column_name] == wallet_address]
 
     else:
         df = pd.DataFrame()
@@ -204,28 +211,25 @@ def wallet_address_exists(df, wallet_address):
 
 # will tell us whether we need to find new data
 # returns a list of [tx_hash, wallet_address]
-def already_part_of_df(event, enum):
+def already_part_of_df(event, contract_type):
 
     all_exist = False
     tx_hash = ''
     wallet_address = ''
 
-    df = pd.read_csv('all_events.csv')
+    if contract_type == 0:
+        df = pd.read_csv('aurelius_redemption_events.csv')
 
     tx_hash = event['transactionHash'].hex()
-    tx_hash = tx_hash.lower()
 
     new_df = tx_hash_exists(df, tx_hash)
 
     if len(new_df) > 0:
-        new_df = lend_borrow_type_exists(new_df, enum)
+        wallet_address = handle_weth_gateway(event, contract_type)
+        new_df = wallet_address_exists(df, wallet_address, contract_type)
 
         if len(new_df) > 0:
-            wallet_address = handle_weth_gateway(event, enum).lower()
-            new_df = wallet_address_exists(df, wallet_address)
-
-            if len(new_df) > 0:
-                all_exist = True
+            all_exist = True
 
     response_list = [tx_hash, wallet_address, all_exist]
 
@@ -285,42 +289,16 @@ def user_data(events, contract_type):
     trove_owner_list = []
     block_number_list = []
 
-    df['redemption_number'] = redemption_number_list
-    df['timestamp'] = timestamp_list
-    df['tx_hash'] = tx_hash_list
-    df['transaction'] = transaction_list
-    df['redeemed_token'] = redeemed_token_list
-    df['redeemed_collateral_per_trove_owner_usd'] = redeemed_collateral_per_trove_owner_usd_list
-    df['debt_repaid_per_trove_owner_usd'] = debt_repaid_per_trove_owner_usd_list
-    df['profit_or_loss_usd'] = profit_or_loss_usd_list
-    df['number_of_redeemed_tokens'] = number_of_redeemed_tokens_list
-    df['ern_debt_repaid'] = ern_debt_repaid_list
-    df['redemption_fee_usd'] = redemption_fee_usd_list
-    df['redemption_fee_tokens'] = redemption_fee_tokens_list
-    df['redemption_fee_percent'] = redemption_fee_percent_list
-    df['trove_owner'] = trove_owner_list
-    df['block_number'] = block_number_list
-
     user = ''
 
     start_time = time.time()
     i = 1
     for event in events:
         time.sleep(0.25)
-        print('Batch of Events Processed: ', i, '/', len(events))
-        i+=1
-        # if enum_name == 'REPAY':
-        #     user = 'user'
-        # elif enum_name == 'COLLATERALISE':
-        #     user = 'user'
-        # else:
-        #     user = 'user'
-
-        # block = web3.eth.get_block(event['blockNumber'])
-        # if block['timestamp'] >= 1701086400:
-        if enum_name != 'COLLATERALISE':
-            
-            exists_list = already_part_of_df(event, enum_name)
+        if contract_type == 0:
+            print('Batch of Events Processed: ', i, '/', len(events))
+                
+            exists_list = already_part_of_df(event, contract_type)
 
             tx_hash = exists_list[0]
             wallet_address = exists_list[1]
@@ -351,7 +329,7 @@ def user_data(events, contract_type):
                 pass
 
         else:
-            exists_list = already_part_of_df(event, enum_name)
+            exists_list = already_part_of_df(event, contract_type)
 
             tx_hash = exists_list[0]
             wallet_address = exists_list[1]
@@ -374,18 +352,27 @@ def user_data(events, contract_type):
             
             else:
                 pass
+        i+=1
 
-    df['wallet_address'] = user_address_list
-    df['txHash'] = tx_hash_list
+    df['redemption_number'] = redemption_number_list
     df['timestamp'] = timestamp_list
-    df['tokenAddress'] = token_address_list
-    df['tokenVolume'] = token_volume_list
-    df['tokenUSDAmount'] = token_usd_amount_list
-    df['blockNumber'] = block_list
-    df['lendBorrowType'] = lend_borrow_type_list
+    df['tx_hash'] = tx_hash_list
+    df['transaction'] = transaction_list
+    df['redeemed_token'] = redeemed_token_list
+    df['redeemed_collateral_per_trove_owner_usd'] = redeemed_collateral_per_trove_owner_usd_list
+    df['debt_repaid_per_trove_owner_usd'] = debt_repaid_per_trove_owner_usd_list
+    df['profit_or_loss_usd'] = profit_or_loss_usd_list
+    df['number_of_redeemed_tokens'] = number_of_redeemed_tokens_list
+    df['ern_debt_repaid'] = ern_debt_repaid_list
+    df['redemption_fee_usd'] = redemption_fee_usd_list
+    df['redemption_fee_tokens'] = redemption_fee_tokens_list
+    df['redemption_fee_percent'] = redemption_fee_percent_list
+    df['trove_owner'] = trove_owner_list
+    df['block_number'] = block_number_list
 
     # print('User Data Event Looping done in: ', time.time() - start_time)
     return df
+
 
 # # runs all our looks
 # # updates our csv
@@ -409,6 +396,7 @@ def find_all_transactions(contract_address):
     latest_block = web3.eth.get_block('latest')
     latest_block = int(latest_block['number'])
     
+    # # handles empty csv files
     try:
         from_block = int(max(event_df['block_number']))
     except:
@@ -423,7 +411,7 @@ def find_all_transactions(contract_address):
             events = get_redemption_events(contract, from_block, to_block)
 
         if len(events) > 0:
-            df = user_data(events)
+            df = user_data(events, contract_type)
             make_user_data_csv(df)
 
         from_block += 955
