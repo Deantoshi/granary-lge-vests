@@ -58,6 +58,12 @@ def get_redemption_events(contract, from_block, to_block):
 
     return events
 
+# # gets our troveUpdated events
+def get_trove_updated_events(contract, from_block, to_block):
+    events = contract.events.TroveUpdated.get_logs(fromBlock=from_block, toBlock=to_block)
+
+    return events
+
 # gets the last block number we have gotten data from and returns this block number
 def get_last_block_tracked():
     df = pd.read_csv('all_users.csv')
@@ -89,33 +95,29 @@ def make_checksum_values(df):
     return df
 
 #makes a dataframe and stores it in a csv file
-def make_user_data_csv(df_list):
+def make_user_data_csv(df, contract_type):
     
-    csv_list = ['aurelius_redemption_events.csv']
-    subset_list = [['liquidator_address', 'tx_hash', 'collateral_redeemed']]
+    combined_df_list = []
 
-    i = 0
+    csv_list = ['aurelius_redemption_events.csv', 'aurelius_trove_updated_events.csv']
+    subset_list = [['liquidator_address', 'tx_hash', 'collateral_redeemed'], ['trove_owner', 'tx_hash', 'collateral_redeemed']]
+    
+    i = contract_type
 
-    while i < len(df_list):
-
-        df = df_list[i]
+    if len(df) > 0:
         
-        if len(df) > 0:
-            if i == 0:
-                    old_df = pd.read_csv(csv_list[i])
-                    old_df = old_df.drop_duplicates(subset=subset_list[i], keep='last')
+        old_df = pd.read_csv(csv_list[i])
+        old_df = old_df.drop_duplicates(subset=subset_list[i], keep='last')
 
-            combined_df_list = [df, old_df]
-            combined_df = pd.concat(combined_df_list)
+        combined_df_list = [df, old_df]
 
-            if i ==0:
-                combined_df = combined_df.drop_duplicates(subset=subset_list[i], keep='last')
-            
-            if len(combined_df) >= len(old_df):
-                combined_df.to_csv(csv_list[i], index=False)
-                print('Event CSV Updated')
+        combined_df = pd.concat(combined_df_list)
+
+        combined_df = combined_df.drop_duplicates(subset=subset_list[i], keep='last')
         
-        i += 1
+        if len(combined_df) >= len(old_df):
+            combined_df.to_csv(csv_list[i], index=False)
+            print('Event CSV Updated')
 
     return
 
@@ -170,6 +172,10 @@ def handle_weth_gateway(event, contract_type):
 
     if contract_type == 0:
         payload_address = event['address']
+    
+    if contract_type == 1:
+        # print(event)
+        payload_address = event['args']['_borrower']
 
     elif payload_address == '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995':
         if contract_type == 2:
@@ -226,13 +232,16 @@ def already_part_of_df(event, contract_type):
 
     if contract_type == 0:
         df = pd.read_csv('aurelius_redemption_events.csv')
+    
+    elif contract_type == 1:
+        df = pd.read_csv('aurelius_trove_updated_events.csv')
 
     tx_hash = event['transactionHash'].hex()
 
     new_df = tx_hash_exists(df, tx_hash)
+    wallet_address = handle_weth_gateway(event, contract_type)
 
     if len(new_df) > 0:
-        wallet_address = handle_weth_gateway(event, contract_type)
         new_df = wallet_address_exists(df, wallet_address, contract_type)
 
         if len(new_df) > 0:
@@ -316,6 +325,50 @@ def make_redemption_event_df(event, tx_hash, wallet_address):
 
     return df
 
+# # turns our troveUpdated event into a dataframe and returns it
+def make_trove_updated_event_df(event, tx_hash, wallet_address):
+
+    df = pd.DataFrame()
+
+    tx_hash_list = []
+    trove_owner_list = []
+    collateral_redeemed_list = []
+    number_of_collateral_tokens_list = []
+    debt_list = []
+    timestamp_list = []
+    operation_list = []
+    block_list = []
+
+    #adds wallet_address if it doesn't exist
+    if len(wallet_address) == 42:
+
+        block = web3.eth.get_block(event['blockNumber'])
+        block_number = int(block['number'])
+        block_list.append(block_number)
+
+        trove_owner_list.append(wallet_address)
+        tx_hash_list.append(tx_hash)
+        timestamp_list.append(block['timestamp'])
+        token_address = event['args']['_collateral']
+        collateral_redeemed_list.append(token_address)
+        token_amount = event['args']['_coll']
+        number_of_collateral_tokens_list.append(token_amount)
+        debt = event['args']['_debt']
+        debt_list.append(debt)
+        operation = int(event['args']['_operation'])
+        operation_list.append(operation)
+
+    df['tx_hash'] = tx_hash_list
+    df['trove_owner'] = trove_owner_list
+    df['collateral_redeemed'] = collateral_redeemed_list
+    df['number_of_collateral_tokens'] = number_of_collateral_tokens_list
+    df['debt'] = debt_list
+    df['operation'] = operation_list
+    df['timestamp'] = timestamp_list
+    df['block_number'] = block_list
+
+    return df
+
 #makes our dataframe
 def user_data(events, contract_type):
     
@@ -323,45 +376,42 @@ def user_data(events, contract_type):
 
     redemption_df_list = []
 
-    if contract_type == 0:
-        print('redemption_contract')
-
     user = ''
 
     start_time = time.time()
+
     i = 1
     for event in events:
         time.sleep(0.25)
-        if contract_type == 0:
-            print('Batch of Events Processed: ', i, '/', len(events))
-                
-            exists_list = already_part_of_df(event, contract_type)
+        
+        print(contract_type, ' Batch of Events Processed: ', i, '/', len(events))
+            
+        exists_list = already_part_of_df(event, contract_type)
 
-            tx_hash = exists_list[0]
-            wallet_address = exists_list[1]
-            exists = exists_list[2]
+        tx_hash = exists_list[0]
+        wallet_address = exists_list[1]
+        exists = exists_list[2]
 
-            if exists == False and len(wallet_address) == 42: 
-                if contract_type == 0:
-                    df = make_redemption_event_df(event, tx_hash, wallet_address)
-                    redemption_df_list.append(df)
+        if exists == False and len(wallet_address) == 42: 
+            if contract_type == 0:
+                df = make_redemption_event_df(event, tx_hash, wallet_address)
+            if contract_type == 1:
+                df = make_trove_updated_event_df(event, tx_hash, wallet_address)
             
             else:
                 pass
 
         i+=1
 
-    if len(redemption_df_list) < 1:
-        redemption_df = make_redemption_event_df(event, tx_hash, '')
-        redemption_df_list.append(redemption_df)
-
-    redemption_df = pd.concat(redemption_df_list)
+    if len(df) < 1:
+        if contract_type == 0:
+            df = make_redemption_event_df(event, tx_hash, '')
+        
+        elif contract_type == 1:
+            df = make_trove_updated_event_df(event, '', '')
     
-    print(redemption_df)
-
-    all_df_list = [redemption_df]
     # print('User Data Event Looping done in: ', time.time() - start_time)
-    return all_df_list
+    return df
 
 
 # # runs all our looks
@@ -373,7 +423,8 @@ def find_all_transactions(contract_address):
 
     interval = 9555
 
-    from_block = 61359924
+    # # from_block = 51922528 # when the contract was made
+    from_block = 61327139
     to_block = from_block + interval
 
     if contract_address in TROVE_MANAGER_LIST:
@@ -381,31 +432,39 @@ def find_all_transactions(contract_address):
     
     if contract_type == 0:
         abi = get_trove_manager_contract_abi()
-        event_df = pd.read_csv('aurelius_redemption_events.csv')
 
-    contract = get_contract(contract_address, abi)
+    aurelius_contract = get_contract(contract_address, abi)
 
     latest_block = web3.eth.get_block('latest')
     latest_block = int(latest_block['number'])
     
     # # handles empty csv files
-    try:
-        from_block = int(max(event_df['block_number']))
-    except:
-        from_block = FROM_BLOCK
+    # try:
+    #     from_block = int(max(event_df['block_number']))
+    # except:
+    #     from_block = FROM_BLOCK
 
+    # to_block = from_block + interval
+    
     to_block = from_block + interval
 
     while to_block < latest_block:
 
-        print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block)
-        if contract_type == 0:
-            events = get_redemption_events(contract, from_block, to_block)
+        print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block, 'Blocks Remaining: ', latest_block - from_block)
 
-        if len(events) > 0:
-            df_list = user_data(events, contract_type)
+        aurelius_redemption_events = get_redemption_events(aurelius_contract, from_block, to_block)
+        aurelius_trove_updated_events = get_trove_updated_events(aurelius_contract, from_block, to_block)
+        
 
-            make_user_data_csv(df_list)
+        if len(aurelius_redemption_events) > 0:
+            contract_type = 0
+            df = user_data(aurelius_redemption_events, contract_type)
+            make_user_data_csv(df, contract_type)
+        
+        if len(aurelius_trove_updated_events) > 0:
+            contract_type = 1
+            df = user_data(aurelius_trove_updated_events, contract_type)
+            make_user_data_csv(df, contract_type)
 
         from_block += interval
         to_block += interval
@@ -533,7 +592,7 @@ def find_rolling_lp_balance(df):
     calculated_df = calculated_df.sort_values(by=['block'], ascending=False)
     calculated_df = calculated_df.reset_index(drop=True)
 
-    print(calculated_df)
+    # print(calculated_df)
 
     calculated_df.to_csv('outputData.csv', index=False)
 
