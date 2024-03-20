@@ -371,8 +371,10 @@ def find_all_transactions(contract_address):
     # -1 = default, 0 = troveManager
     contract_type = -1
 
+    interval = 9555
+
     from_block = 61359924
-    to_block = from_block + 1000
+    to_block = from_block + interval
 
     if contract_address in TROVE_MANAGER_LIST:
         contract_type = 0
@@ -392,7 +394,7 @@ def find_all_transactions(contract_address):
     except:
         from_block = FROM_BLOCK
 
-    to_block = from_block + 955
+    to_block = from_block + interval
 
     while to_block < latest_block:
 
@@ -405,8 +407,8 @@ def find_all_transactions(contract_address):
 
             make_user_data_csv(df_list)
 
-        from_block += 955
-        to_block += 955
+        from_block += interval
+        to_block += interval
 
         # print(deposit_events)
 
@@ -418,7 +420,7 @@ def find_all_transactions(contract_address):
         if to_block >= latest_block:
             to_block = latest_block
     
-    return deposit_df
+    return
 
 # Gets transactions of all blocks within a specified range and returns a df with info from blocks that include our contract
 def get_all_gateway_transactions():
