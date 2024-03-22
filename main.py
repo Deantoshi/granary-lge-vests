@@ -551,9 +551,65 @@ def get_all_gateway_transactions():
 
     make_user_data_csv(df)
 
+# returns a list of borrowers who have been redeemed
+def get_redeemed_trove_owner_address_list(redemption_df, trove_updated_df):
 
+    unique_redemption_user_df = redemption_df.drop_duplicates(subset=['tx_hash'])
 
+    redemption_tx_hash_list = unique_redemption_user_df['tx_hash'].tolist()
+
+    trove_updated_redemption_tx_list = [trove_updated_df.loc[trove_updated_df['tx_hash'] == x] for x in redemption_tx_hash_list]
+
+    trove_updated_redemption_df = pd.concat(trove_updated_redemption_tx_list)
+
+    trove_updated_redemption_df = trove_updated_redemption_df.drop_duplicates(subset=['tx_hash'])
+
+    unique_redeemed_trove_owner_address_list = trove_updated_redemption_df['trove_owner'].tolist()
+
+    return unique_redeemed_trove_owner_address_list
+
+# # calculates a users rolling trove balance
+def calculate_user_balance_history(trove_owner_df, redemption_df, trove_updated_df):
+
+    trove_owner_df = trove_owner_df.sort_values(by=['block_number'], ascending=False)
+    trove_owner_df = trove_owner_df.reset_index(drop=True)
+
+    trove_owner_df['number_of_collateral_tokens'] = trove_owner_df['number_of_collateral_tokens'].astype(float)
+    trove_owner_df['debt'] = trove_owner_df['debt'].astype(float)
+    print(trove_owner_df.dtypes)
+    
+    trove_owner_df['collateral_change'] = trove_owner_df['number_of_collateral_tokens'].diff()
+    trove_owner_df['debt_change'] = trove_owner_df['debt'].diff()
+    print(trove_owner_df)
+
+    return trove_owner_df
+
+# # finds our rolling balance for each redeemed trove_owner
+def get_redeemed_user_trove_history(redemption_df, trove_updated_df):
+
+    unique_redeemed_trove_owner_list = get_redeemed_trove_owner_address_list(redemption_df, trove_updated_df)
+    
+    for trove_owner in unique_redeemed_trove_owner_list:
+        trove_owner_df = trove_updated_df.loc[trove_updated_df['trove_owner'] == trove_owner]
+        unique_collateral_list = trove_owner_df.collateral_redeemed.unique()
+        
+
+        for collateral in unique_collateral_list:
+            user_collateral_df = trove_owner_df.loc[trove_owner_df['collateral_redeemed'] == collateral]
+            user_collateral_df = calculate_user_balance_history(user_collateral_df, redemption_df, trove_updated_df)
+
+        print(trove_owner)
+        print(trove_owner_df)
+
+    return
+# # troveManager
 # contract_address = '0x295c6074F090f85819cbC911266522e43A8e0f4A'
-contract_address = '0x4Cd23F2C694F991029B85af5575D0B5E70e4A3F1'
+# # borrowerOperations
+# contract_address = '0x4Cd23F2C694F991029B85af5575D0B5E70e4A3F1'
 
-find_all_transactions(contract_address)
+# find_all_transactions(contract_address)
+
+redemption_df = pd.read_csv('aurelius_redemption_events.csv')
+trove_updated_df = pd.read_csv('aurelius_trove_updated_events.csv')
+
+get_redeemed_user_trove_history(redemption_df, trove_updated_df)
