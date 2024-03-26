@@ -4,7 +4,7 @@ import pandas as pd
 import time
 
 # Replace with the actual Optimism RPC URL
-rpc_url = 'https://mantle.drpc.org'
+rpc_url = 'https://andromeda.metis.io'
 # # rpc_url = ''
 
 # Create a Web3 instance to connect to the Optimism blockchain
@@ -17,8 +17,6 @@ LATEST_BLOCK = 951714 + 1
 # FROM_BLOCK = 758632
 FROM_BLOCK = 778064
 # FROM_BLOCK = 0
-TROVE_MANAGER_LIST = ['0x295c6074F090f85819cbC911266522e43A8e0f4A']
-BORROWER_OPERATIONS_LIST = ['0x4Cd23F2C694F991029B85af5575D0B5E70e4A3F1']
 
 # returns basic data about our reserves in a dataframe
 def get_reserve_data():
@@ -40,35 +38,16 @@ def get_reserve_data():
 
     return df
 
-# # gets the ABI for our redemption contract
-def get_trove_manager_contract_abi():
-    contract_abi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_activePoolAddress","type":"address"}],"name":"ActivePoolAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"uint256","name":"_baseRate","type":"uint256"}],"name":"BaseRateUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_newBorrowerOperationsAddress","type":"address"}],"name":"BorrowerOperationsAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_collSurplusPoolAddress","type":"address"}],"name":"CollSurplusPoolAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_newCollateralConfigAddress","type":"address"}],"name":"CollateralConfigAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_defaultPoolAddress","type":"address"}],"name":"DefaultPoolAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_gasPoolAddress","type":"address"}],"name":"GasPoolAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_lqtyStakingAddress","type":"address"}],"name":"LQTYStakingAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_lqtyTokenAddress","type":"address"}],"name":"LQTYTokenAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_L_Collateral","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_L_LUSDDebt","type":"uint256"}],"name":"LTermsUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_newLUSDTokenAddress","type":"address"}],"name":"LUSDTokenAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"uint256","name":"_lastFeeOpTime","type":"uint256"}],"name":"LastFeeOpTimeUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_liquidatedDebt","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_liquidatedColl","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_collGasCompensation","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_LUSDGasCompensation","type":"uint256"}],"name":"Liquidation","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_liquidationHelperAddress","type":"address"}],"name":"LiquidationHelperAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_newPriceFeedAddress","type":"address"}],"name":"PriceFeedAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_attemptedLUSDAmount","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_actualLUSDAmount","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_collSent","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_collFee","type":"uint256"}],"name":"Redemption","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_redemptionHelperAddress","type":"address"}],"name":"RedemptionHelperAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_sortedTrovesAddress","type":"address"}],"name":"SortedTrovesAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_stabilityPoolAddress","type":"address"}],"name":"StabilityPoolAddressChanged","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_totalStakesSnapshot","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_totalCollateralSnapshot","type":"uint256"}],"name":"SystemSnapshotsUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_newTotalStakes","type":"uint256"}],"name":"TotalStakesUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_borrower","type":"address"},{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_newIndex","type":"uint256"}],"name":"TroveIndexUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"_borrower","type":"address"},{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_debt","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_coll","type":"uint256"},{"indexed":False,"internalType":"enum TroveManager.TroveManagerOperation","name":"_operation","type":"uint8"}],"name":"TroveLiquidated","type":"event"},{"anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_L_Collateral","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_L_LUSDDebt","type":"uint256"}],"name":"TroveSnapshotsUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"_borrower","type":"address"},{"indexed":False,"internalType":"address","name":"_collateral","type":"address"},{"indexed":False,"internalType":"uint256","name":"_debt","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_coll","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"_stake","type":"uint256"},{"indexed":False,"internalType":"enum TroveManager.TroveManagerOperation","name":"_operation","type":"uint8"}],"name":"TroveUpdated","type":"event"},{"inputs":[],"name":"BETA","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"BORROWING_FEE_FLOOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"DECIMAL_PRECISION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"LUSD_GAS_COMPENSATION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"L_Collateral","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"L_LUSDDebt","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BORROWING_FEE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MINUTE_DECAY_FACTOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_NET_DEBT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PERCENT_DIVISOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REDEMPTION_FEE_FLOOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"SECONDS_IN_ONE_MINUTE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"TroveOwners","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"Troves","outputs":[{"internalType":"uint256","name":"debt","type":"uint256"},{"internalType":"uint256","name":"coll","type":"uint256"},{"internalType":"uint256","name":"stake","type":"uint256"},{"internalType":"enum TroveStatus","name":"status","type":"uint8"},{"internalType":"uint128","name":"arrayIndex","type":"uint128"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_100pct","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"activePool","outputs":[{"internalType":"contract IActivePool","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"addTroveOwnerToArray","outputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"applyPendingRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"baseRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"address[]","name":"_troveArray","type":"address[]"}],"name":"batchLiquidateTroves","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"borrowerOperationsAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_redeemer","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_attemptedLUSDAmount","type":"uint256"},{"internalType":"uint256","name":"_actualLUSDAmount","type":"uint256"},{"internalType":"uint256","name":"_collSent","type":"uint256"},{"internalType":"uint256","name":"_collFee","type":"uint256"}],"name":"burnLUSDAndEmitRedemptionEvent","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_price","type":"uint256"}],"name":"checkRecoveryMode","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_closedStatusNum","type":"uint256"}],"name":"closeTrove","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"collateralConfig","outputs":[{"internalType":"contract ICollateralConfig","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decayBaseRateFromBorrowing","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_collDecrease","type":"uint256"}],"name":"decreaseTroveColl","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_debtDecrease","type":"uint256"}],"name":"decreaseTroveDebt","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"defaultPool","outputs":[{"internalType":"contract IDefaultPool","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_liquidatedDebt","type":"uint256"},{"internalType":"uint256","name":"_liquidatedColl","type":"uint256"},{"internalType":"uint256","name":"_collGasCompensation","type":"uint256"},{"internalType":"uint256","name":"_LUSDGasCompensation","type":"uint256"}],"name":"emitLiquidationEvent","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_debt","type":"uint256"},{"internalType":"uint256","name":"_coll","type":"uint256"},{"internalType":"bool","name":"_isRecoveryMode","type":"bool"}],"name":"emitTroveLiquidatedAndTroveUpdated","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_LUSDDebt","type":"uint256"}],"name":"getBorrowingFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_LUSDDebt","type":"uint256"}],"name":"getBorrowingFeeWithDecay","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getBorrowingRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getBorrowingRateWithDecay","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_price","type":"uint256"}],"name":"getCurrentICR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"getEntireDebtAndColl","outputs":[{"internalType":"uint256","name":"debt","type":"uint256"},{"internalType":"uint256","name":"coll","type":"uint256"},{"internalType":"uint256","name":"pendingLUSDDebtReward","type":"uint256"},{"internalType":"uint256","name":"pendingCollateralReward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"}],"name":"getEntireSystemColl","outputs":[{"internalType":"uint256","name":"entireSystemColl","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"}],"name":"getEntireSystemDebt","outputs":[{"internalType":"uint256","name":"entireSystemDebt","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"getNominalICR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"getPendingCollateralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"getPendingLUSDDebtReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_collateralDrawn","type":"uint256"}],"name":"getRedemptionFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_collateralDrawn","type":"uint256"}],"name":"getRedemptionFeeWithDecay","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getRedemptionRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getRedemptionRateWithDecay","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_price","type":"uint256"}],"name":"getTCR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"getTroveColl","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"getTroveDebt","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_index","type":"uint256"}],"name":"getTroveFromTroveOwnersArray","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"}],"name":"getTroveOwnersCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"getTroveStake","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"getTroveStatus","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"hasPendingRewards","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_collIncrease","type":"uint256"}],"name":"increaseTroveColl","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_debtIncrease","type":"uint256"}],"name":"increaseTroveDebt","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastCollateralError_Redistribution","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastFeeOperationTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastLUSDDebtError_Redistribution","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"liquidate","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_n","type":"uint256"}],"name":"liquidateTroves","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"liquidationHelper","outputs":[{"internalType":"contract ILiquidationHelper","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lqtyStaking","outputs":[{"internalType":"contract ILQTYStaking","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lqtyToken","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lusdToken","outputs":[{"internalType":"contract ILUSDToken","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract IActivePool","name":"_activePool","type":"address"},{"internalType":"contract IDefaultPool","name":"_defaultPool","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_LUSD","type":"uint256"},{"internalType":"uint256","name":"_collAmount","type":"uint256"}],"name":"movePendingTroveRewardsToActivePool","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"priceFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_id","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_newNICR","type":"uint256"},{"internalType":"address","name":"_prevId","type":"address"},{"internalType":"address","name":"_nextId","type":"address"}],"name":"reInsert","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_LUSD","type":"uint256"},{"internalType":"uint256","name":"_collAmount","type":"uint256"}],"name":"redeemCloseTrove","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_LUSDamount","type":"uint256"},{"internalType":"address","name":"_firstRedemptionHint","type":"address"},{"internalType":"address","name":"_upperPartialRedemptionHint","type":"address"},{"internalType":"address","name":"_lowerPartialRedemptionHint","type":"address"},{"internalType":"uint256","name":"_partialRedemptionHintNICR","type":"uint256"},{"internalType":"uint256","name":"_maxIterations","type":"uint256"},{"internalType":"uint256","name":"_maxFeePercentage","type":"uint256"}],"name":"redeemCollateral","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"redemptionHelper","outputs":[{"internalType":"contract IRedemptionHelper","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract IActivePool","name":"_activePool","type":"address"},{"internalType":"contract IDefaultPool","name":"_defaultPool","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_debt","type":"uint256"},{"internalType":"uint256","name":"_coll","type":"uint256"},{"internalType":"uint256","name":"_collDecimals","type":"uint256"}],"name":"redistributeDebtAndColl","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"removeStake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"rewardSnapshots","outputs":[{"internalType":"uint256","name":"collAmount","type":"uint256"},{"internalType":"uint256","name":"LUSDDebt","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract IActivePool","name":"_activePool","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"address","name":"_liquidator","type":"address"},{"internalType":"uint256","name":"_LUSD","type":"uint256"},{"internalType":"uint256","name":"_collAmount","type":"uint256"}],"name":"sendGasCompensation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrowerOperationsAddress","type":"address"},{"internalType":"address","name":"_collateralConfigAddress","type":"address"},{"internalType":"address","name":"_activePoolAddress","type":"address"},{"internalType":"address","name":"_defaultPoolAddress","type":"address"},{"internalType":"address","name":"_gasPoolAddress","type":"address"},{"internalType":"address","name":"_collSurplusPoolAddress","type":"address"},{"internalType":"address","name":"_priceFeedAddress","type":"address"},{"internalType":"address","name":"_lusdTokenAddress","type":"address"},{"internalType":"address","name":"_sortedTrovesAddress","type":"address"},{"internalType":"address","name":"_lqtyTokenAddress","type":"address"},{"internalType":"address","name":"_lqtyStakingAddress","type":"address"},{"internalType":"address","name":"_redemptionHelperAddress","type":"address"},{"internalType":"address","name":"_liquidationHelperAddress","type":"address"}],"name":"setAddresses","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_num","type":"uint256"}],"name":"setTroveStatus","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"sortedTroves","outputs":[{"internalType":"contract ISortedTroves","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"totalCollateralSnapshot","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"totalStakes","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"totalStakesSnapshot","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_collateralDrawn","type":"uint256"},{"internalType":"uint256","name":"_price","type":"uint256"},{"internalType":"uint256","name":"_collDecimals","type":"uint256"},{"internalType":"uint256","name":"_collDebt","type":"uint256"}],"name":"updateBaseRateFromRedemption","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_newDebt","type":"uint256"},{"internalType":"uint256","name":"_newColl","type":"uint256"}],"name":"updateDebtAndCollAndStakesPostRedemption","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"updateStakeAndTotalStakes","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract IActivePool","name":"_activePool","type":"address"},{"internalType":"address","name":"_collateral","type":"address"},{"internalType":"uint256","name":"_collRemainder","type":"uint256"}],"name":"updateSystemSnapshots_excludeCollRemainder","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_borrower","type":"address"},{"internalType":"address","name":"_collateral","type":"address"}],"name":"updateTroveRewardSnapshots","outputs":[],"stateMutability":"nonpayable","type":"function"}]
-    return contract_abi
-
-# # gets the ABI for our borrower operations contract
-def get_borrower_operations_abi():
-    contract_abi = [ { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_activePoolAddress", "type": "address" } ], "name": "ActivePoolAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_collSurplusPoolAddress", "type": "address" } ], "name": "CollSurplusPoolAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_newCollateralConfigAddress", "type": "address" } ], "name": "CollateralConfigAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_defaultPoolAddress", "type": "address" } ], "name": "DefaultPoolAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_gasPoolAddress", "type": "address" } ], "name": "GasPoolAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_lqtyStakingAddress", "type": "address" } ], "name": "LQTYStakingAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": True, "internalType": "address", "name": "_borrower", "type": "address" }, { "indexed": False, "internalType": "address", "name": "_collateral", "type": "address" }, { "indexed": False, "internalType": "uint256", "name": "_LUSDFee", "type": "uint256" } ], "name": "LUSDBorrowingFeePaid", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_lusdTokenAddress", "type": "address" } ], "name": "LUSDTokenAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_leverager", "type": "address" } ], "name": "LeveragerAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": True, "internalType": "address", "name": "previousOwner", "type": "address" }, { "indexed": True, "internalType": "address", "name": "newOwner", "type": "address" } ], "name": "OwnershipTransferred", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_newPriceFeedAddress", "type": "address" } ], "name": "PriceFeedAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_borrower", "type": "address" }, { "indexed": False, "internalType": "bool", "name": "_isExempt", "type": "bool" } ], "name": "SetFeeExemption", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_sortedTrovesAddress", "type": "address" } ], "name": "SortedTrovesAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": True, "internalType": "address", "name": "_borrower", "type": "address" }, { "indexed": False, "internalType": "address", "name": "_collateral", "type": "address" }, { "indexed": False, "internalType": "uint256", "name": "arrayIndex", "type": "uint256" } ], "name": "TroveCreated", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": False, "internalType": "address", "name": "_newTroveManagerAddress", "type": "address" } ], "name": "TroveManagerAddressChanged", "type": "event" }, { "anonymous": False, "inputs": [ { "indexed": True, "internalType": "address", "name": "_borrower", "type": "address" }, { "indexed": False, "internalType": "address", "name": "_collateral", "type": "address" }, { "indexed": False, "internalType": "uint256", "name": "_debt", "type": "uint256" }, { "indexed": False, "internalType": "uint256", "name": "_coll", "type": "uint256" }, { "indexed": False, "internalType": "uint256", "name": "stake", "type": "uint256" }, { "indexed": False, "internalType": "enum BorrowerOperations.BorrowerOperation", "name": "operation", "type": "uint8" } ], "name": "TroveUpdated", "type": "event" }, { "inputs": [], "name": "BORROWING_FEE_FLOOR", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "DECIMAL_PRECISION", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "LUSD_GAS_COMPENSATION", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "MIN_NET_DEBT", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "NAME", "outputs": [ { "internalType": "string", "name": "", "type": "string" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "PERCENT_DIVISOR", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "_100pct", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "activePool", "outputs": [ { "internalType": "contract IActivePool", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" }, { "internalType": "uint256", "name": "_collAmount", "type": "uint256" }, { "internalType": "address", "name": "_upperHint", "type": "address" }, { "internalType": "address", "name": "_lowerHint", "type": "address" } ], "name": "addColl", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" }, { "internalType": "uint256", "name": "_maxFeePercentage", "type": "uint256" }, { "internalType": "uint256", "name": "_collTopUp", "type": "uint256" }, { "internalType": "uint256", "name": "_collWithdrawal", "type": "uint256" }, { "internalType": "uint256", "name": "_LUSDChange", "type": "uint256" }, { "internalType": "bool", "name": "_isDebtIncrease", "type": "bool" }, { "internalType": "address", "name": "_upperHint", "type": "address" }, { "internalType": "address", "name": "_lowerHint", "type": "address" } ], "name": "adjustTrove", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "components": [ { "internalType": "address", "name": "_borrower", "type": "address" }, { "internalType": "address", "name": "_collateral", "type": "address" }, { "internalType": "uint256", "name": "_maxFeePercentage", "type": "uint256" }, { "internalType": "uint256", "name": "_collTopUp", "type": "uint256" }, { "internalType": "uint256", "name": "_collWithdrawal", "type": "uint256" }, { "internalType": "uint256", "name": "_LUSDChange", "type": "uint256" }, { "internalType": "bool", "name": "_isDebtIncrease", "type": "bool" }, { "internalType": "address", "name": "_upperHint", "type": "address" }, { "internalType": "address", "name": "_lowerHint", "type": "address" } ], "internalType": "struct IBorrowerOperations.Params_adjustTroveFor", "name": "params", "type": "tuple" } ], "name": "adjustTroveFor", "outputs": [ { "internalType": "address", "name": "", "type": "address" }, { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" } ], "name": "claimCollateral", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" } ], "name": "closeTrove", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_borrower", "type": "address" }, { "internalType": "address", "name": "_collateral", "type": "address" } ], "name": "closeTroveFor", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "collateralConfig", "outputs": [ { "internalType": "contract ICollateralConfig", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "defaultPool", "outputs": [ { "internalType": "contract IDefaultPool", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "", "type": "address" } ], "name": "exemptFromFee", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "uint256", "name": "_debt", "type": "uint256" } ], "name": "getCompositeDebt", "outputs": [ { "internalType": "uint256", "name": "", "type": "uint256" } ], "stateMutability": "pure", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" } ], "name": "getEntireSystemColl", "outputs": [ { "internalType": "uint256", "name": "entireSystemColl", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" } ], "name": "getEntireSystemDebt", "outputs": [ { "internalType": "uint256", "name": "entireSystemDebt", "type": "uint256" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "initialized", "outputs": [ { "internalType": "bool", "name": "", "type": "bool" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "leveragerAddress", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "lqtyStakingAddress", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "lusdToken", "outputs": [ { "internalType": "contract ILUSDToken", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" }, { "internalType": "uint256", "name": "_collAmount", "type": "uint256" }, { "internalType": "uint256", "name": "_maxFeePercentage", "type": "uint256" }, { "internalType": "uint256", "name": "_LUSDAmount", "type": "uint256" }, { "internalType": "address", "name": "_upperHint", "type": "address" }, { "internalType": "address", "name": "_lowerHint", "type": "address" } ], "name": "openTrove", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_borrower", "type": "address" }, { "internalType": "address", "name": "_collateral", "type": "address" }, { "internalType": "uint256", "name": "_collAmount", "type": "uint256" }, { "internalType": "uint256", "name": "_maxFeePercentage", "type": "uint256" }, { "internalType": "uint256", "name": "_LUSDAmount", "type": "uint256" }, { "internalType": "address", "name": "_upperHint", "type": "address" }, { "internalType": "address", "name": "_lowerHint", "type": "address" } ], "name": "openTroveFor", "outputs": [ { "internalType": "address", "name": "", "type": "address" }, { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "owner", "outputs": [ { "internalType": "address", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "priceFeed", "outputs": [ { "internalType": "contract IPriceFeed", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" }, { "internalType": "uint256", "name": "_LUSDAmount", "type": "uint256" }, { "internalType": "address", "name": "_upperHint", "type": "address" }, { "internalType": "address", "name": "_lowerHint", "type": "address" } ], "name": "repayLUSD", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateralConfigAddress", "type": "address" }, { "internalType": "address", "name": "_troveManagerAddress", "type": "address" }, { "internalType": "address", "name": "_activePoolAddress", "type": "address" }, { "internalType": "address", "name": "_defaultPoolAddress", "type": "address" }, { "internalType": "address", "name": "_gasPoolAddress", "type": "address" }, { "internalType": "address", "name": "_collSurplusPoolAddress", "type": "address" }, { "internalType": "address", "name": "_priceFeedAddress", "type": "address" }, { "internalType": "address", "name": "_sortedTrovesAddress", "type": "address" }, { "internalType": "address", "name": "_lusdTokenAddress", "type": "address" }, { "internalType": "address", "name": "_lqtyStakingAddress", "type": "address" }, { "internalType": "address", "name": "_leveragerAddress", "type": "address" } ], "name": "setAddresses", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_borrower", "type": "address" }, { "internalType": "bool", "name": "_isExempt", "type": "bool" } ], "name": "setExemptFromFee", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_leveragerAddress", "type": "address" } ], "name": "setLeveragerAddress", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "sortedTroves", "outputs": [ { "internalType": "contract ISortedTroves", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "newOwner", "type": "address" } ], "name": "transferOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "troveManager", "outputs": [ { "internalType": "contract ITroveManager", "name": "", "type": "address" } ], "stateMutability": "view", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" }, { "internalType": "uint256", "name": "_collWithdrawal", "type": "uint256" }, { "internalType": "address", "name": "_upperHint", "type": "address" }, { "internalType": "address", "name": "_lowerHint", "type": "address" } ], "name": "withdrawColl", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [ { "internalType": "address", "name": "_collateral", "type": "address" }, { "internalType": "uint256", "name": "_maxFeePercentage", "type": "uint256" }, { "internalType": "uint256", "name": "_LUSDAmount", "type": "uint256" }, { "internalType": "address", "name": "_upperHint", "type": "address" }, { "internalType": "address", "name": "_lowerHint", "type": "address" } ], "name": "withdrawLUSD", "outputs": [], "stateMutability": "nonpayable", "type": "function" } ]
-    return contract_abi
-
-# # gets our web3 contract object
-def get_contract(contract_address, contract_abi):
-
+#gets our web3 contract object
+# @cache
+def get_contract():
+    contract_address = "0x871AfF0013bE6218B61b28b274a6F53DB131795F"
+    contract_abi = [{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":False,"internalType":"address","name":"user","type":"address"},{"indexed":True,"internalType":"address","name":"onBehalfOf","type":"address"},{"indexed":False,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"borrowRateMode","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"borrowRate","type":"uint256"},{"indexed":True,"internalType":"uint16","name":"referral","type":"uint16"}],"name":"Borrow","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":False,"internalType":"address","name":"user","type":"address"},{"indexed":True,"internalType":"address","name":"onBehalfOf","type":"address"},{"indexed":False,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":True,"internalType":"uint16","name":"referral","type":"uint16"}],"name":"Deposit","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"target","type":"address"},{"indexed":True,"internalType":"address","name":"initiator","type":"address"},{"indexed":True,"internalType":"address","name":"asset","type":"address"},{"indexed":False,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"premium","type":"uint256"},{"indexed":False,"internalType":"uint16","name":"referralCode","type":"uint16"}],"name":"FlashLoan","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"collateralAsset","type":"address"},{"indexed":True,"internalType":"address","name":"debtAsset","type":"address"},{"indexed":True,"internalType":"address","name":"user","type":"address"},{"indexed":False,"internalType":"uint256","name":"debtToCover","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"liquidatedCollateralAmount","type":"uint256"},{"indexed":False,"internalType":"address","name":"liquidator","type":"address"},{"indexed":False,"internalType":"bool","name":"receiveAToken","type":"bool"}],"name":"LiquidationCall","type":"event"},{"anonymous":False,"inputs":[],"name":"Paused","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":True,"internalType":"address","name":"user","type":"address"}],"name":"RebalanceStableBorrowRate","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":True,"internalType":"address","name":"user","type":"address"},{"indexed":True,"internalType":"address","name":"repayer","type":"address"},{"indexed":False,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Repay","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":False,"internalType":"uint256","name":"liquidityRate","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"stableBorrowRate","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"variableBorrowRate","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"liquidityIndex","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"variableBorrowIndex","type":"uint256"}],"name":"ReserveDataUpdated","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":True,"internalType":"address","name":"user","type":"address"}],"name":"ReserveUsedAsCollateralDisabled","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":True,"internalType":"address","name":"user","type":"address"}],"name":"ReserveUsedAsCollateralEnabled","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":True,"internalType":"address","name":"user","type":"address"},{"indexed":False,"internalType":"uint256","name":"rateMode","type":"uint256"}],"name":"Swap","type":"event"},{"anonymous":False,"inputs":[],"name":"Unpaused","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"reserve","type":"address"},{"indexed":True,"internalType":"address","name":"user","type":"address"},{"indexed":True,"internalType":"address","name":"to","type":"address"},{"indexed":False,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdraw","type":"event"},{"inputs":[],"name":"FLASHLOAN_PREMIUM_TOTAL","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"LENDINGPOOL_REVISION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_NUMBER_RESERVES","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_STABLE_RATE_BORROW_SIZE_PERCENT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"interestRateMode","type":"uint256"},{"internalType":"uint16","name":"referralCode","type":"uint16"},{"internalType":"address","name":"onBehalfOf","type":"address"}],"name":"borrow","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"address","name":"onBehalfOf","type":"address"},{"internalType":"uint16","name":"referralCode","type":"uint16"}],"name":"deposit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"balanceFromBefore","type":"uint256"},{"internalType":"uint256","name":"balanceToBefore","type":"uint256"}],"name":"finalizeTransfer","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"receiverAddress","type":"address"},{"internalType":"address[]","name":"assets","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"},{"internalType":"uint256[]","name":"modes","type":"uint256[]"},{"internalType":"address","name":"onBehalfOf","type":"address"},{"internalType":"bytes","name":"params","type":"bytes"},{"internalType":"uint16","name":"referralCode","type":"uint16"}],"name":"flashLoan","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"getAddressesProvider","outputs":[{"internalType":"contract ILendingPoolAddressesProvider","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getConfiguration","outputs":[{"components":[{"internalType":"uint256","name":"data","type":"uint256"}],"internalType":"struct DataTypes.ReserveConfigurationMap","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getReserveData","outputs":[{"components":[{"components":[{"internalType":"uint256","name":"data","type":"uint256"}],"internalType":"struct DataTypes.ReserveConfigurationMap","name":"configuration","type":"tuple"},{"internalType":"uint128","name":"liquidityIndex","type":"uint128"},{"internalType":"uint128","name":"variableBorrowIndex","type":"uint128"},{"internalType":"uint128","name":"currentLiquidityRate","type":"uint128"},{"internalType":"uint128","name":"currentVariableBorrowRate","type":"uint128"},{"internalType":"uint128","name":"currentStableBorrowRate","type":"uint128"},{"internalType":"uint40","name":"lastUpdateTimestamp","type":"uint40"},{"internalType":"address","name":"aTokenAddress","type":"address"},{"internalType":"address","name":"stableDebtTokenAddress","type":"address"},{"internalType":"address","name":"variableDebtTokenAddress","type":"address"},{"internalType":"address","name":"interestRateStrategyAddress","type":"address"},{"internalType":"uint8","name":"id","type":"uint8"}],"internalType":"struct DataTypes.ReserveData","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getReserveNormalizedIncome","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"}],"name":"getReserveNormalizedVariableDebt","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getReservesList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserAccountData","outputs":[{"internalType":"uint256","name":"totalCollateralETH","type":"uint256"},{"internalType":"uint256","name":"totalDebtETH","type":"uint256"},{"internalType":"uint256","name":"availableBorrowsETH","type":"uint256"},{"internalType":"uint256","name":"currentLiquidationThreshold","type":"uint256"},{"internalType":"uint256","name":"ltv","type":"uint256"},{"internalType":"uint256","name":"healthFactor","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserConfiguration","outputs":[{"components":[{"internalType":"uint256","name":"data","type":"uint256"}],"internalType":"struct DataTypes.UserConfigurationMap","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"address","name":"aTokenAddress","type":"address"},{"internalType":"address","name":"stableDebtAddress","type":"address"},{"internalType":"address","name":"variableDebtAddress","type":"address"},{"internalType":"address","name":"interestRateStrategyAddress","type":"address"}],"name":"initReserve","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract ILendingPoolAddressesProvider","name":"provider","type":"address"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"collateralAsset","type":"address"},{"internalType":"address","name":"debtAsset","type":"address"},{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"debtToCover","type":"uint256"},{"internalType":"bool","name":"receiveAToken","type":"bool"}],"name":"liquidationCall","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"paused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"address","name":"user","type":"address"}],"name":"rebalanceStableBorrowRate","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"rateMode","type":"uint256"},{"internalType":"address","name":"onBehalfOf","type":"address"}],"name":"repay","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"configuration","type":"uint256"}],"name":"setConfiguration","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bool","name":"val","type":"bool"}],"name":"setPause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"address","name":"rateStrategyAddress","type":"address"}],"name":"setReserveInterestRateStrategyAddress","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"bool","name":"useAsCollateral","type":"bool"}],"name":"setUserUseReserveAsCollateral","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"rateMode","type":"uint256"}],"name":"swapBorrowRateMode","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"asset","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"address","name":"to","type":"address"}],"name":"withdraw","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"}]
+    
+    # Create contract instance
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-    
+
     return contract
-
-# # gets our redemption events
-def get_redemption_events(contract, from_block, to_block):
-    
-    events = contract.events.Redemption.get_logs(fromBlock=from_block, toBlock=to_block)
-
-    return events
-
-# # gets our troveUpdated events
-def get_trove_updated_events(contract, from_block, to_block):
-    events = contract.events.TroveUpdated.get_logs(fromBlock=from_block, toBlock=to_block)
-
-    return events
 
 # gets the last block number we have gotten data from and returns this block number
 def get_last_block_tracked():
@@ -81,6 +60,45 @@ def get_last_block_tracked():
     return last_block_monitored
 
 # print(get_last_block_tracked())
+
+# # gets our token_id that will be used in other functions
+def get_token_id(token_address):
+    token_id = -1
+
+    if token_address == '0x37FA438EdfB7044E9444b4022b2516C4dAA4592F':
+        token_id = 0
+    
+    elif token_address == '0x18bA3e87876f4982810d321D447b81d01Cdf6668':
+        token_id = 1
+    
+    elif token_address == '0x475f3ab387157ebc645874aea1836223b7cc5d19':
+        token_id = 2
+
+    elif token_address == '0x73d49aC28C4Fea2B8e7C6BF45d64A2e68ed53bE0':
+        token_id = 3
+    
+    elif token_address == '0x7f5eC43a46dF54471DAe95d3C05BEBe7301b75Ff':
+        token_id = 4
+    
+    return token_id
+
+# # gets out token symbols
+def get_token_symbol(token_id):
+    
+    token_symbol_list = ['USDC', 'USDT', 'WBTC', 'WETH', 'METIS']
+
+    token_symbol = token_symbol_list[token_id]
+    
+    return token_symbol
+
+# # accounts for out token decimals
+def get_clean_token_amount(token_id, token_volume):
+
+    decimal_list = [1e6, 1e6, 1e8, 1e18, 1e18]
+
+    token_amount = token_volume / decimal_list[token_id]
+
+    return token_amount
 
 def make_checksum_values(df):
 
@@ -101,34 +119,25 @@ def make_checksum_values(df):
     return df
 
 #makes a dataframe and stores it in a csv file
-def make_user_data_csv(df, contract_type):
-    
-    combined_df_list = []
+def make_user_data_csv(df):
+    old_df = pd.read_csv('all_events.csv')
+    old_df = old_df.drop_duplicates(subset=['tx_hash', 'token_address', 'token_amount'], keep='last')
 
-    csv_list = ['aurelius_redemption_events.csv', 'aurelius_trove_updated_events.csv']
-    subset_list = [['liquidator_address', 'tx_hash', 'collateral_redeemed'], ['trove_owner', 'tx_hash', 'collateral_redeemed']]
-    
-    i = contract_type
+    combined_df_list = [df, old_df]
+    combined_df = pd.concat(combined_df_list)
+    combined_df = combined_df.drop_duplicates(subset=['tx_hash', 'token_address', 'token_amount'], keep='last')
 
-    if len(df) > 0:
-        
-        old_df = pd.read_csv(csv_list[i])
-        old_df = old_df.drop_duplicates(subset=subset_list[i], keep='last')
+    # combined_df = make_checksum_values(combined_df)
 
-        combined_df_list = [df, old_df]
-
-        combined_df = pd.concat(combined_df_list)
-
-        combined_df = combined_df.drop_duplicates(subset=subset_list[i], keep='last')
-        
-        if len(combined_df) >= len(old_df):
-            combined_df.to_csv(csv_list[i], index=False)
-            print('Event CSV Updated')
-
+    if len(combined_df) >= len(old_df):
+        combined_df.to_csv('all_events.csv', index=False)
+        print('Event CSV Updated')
     return
 
 # # takes in an a_token address and returns it's contract object
 def get_a_token_contract(contract_address):
+    
+    contract_address = Web3.to_checksum_address(contract_address)
     # contract_address = "0xEB329420Fae03176EC5877c34E2c38580D85E069"
     contract_abi = [{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"owner","type":"address"},{"indexed":True,"internalType":"address","name":"spender","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"from","type":"address"},{"indexed":True,"internalType":"address","name":"to","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"index","type":"uint256"}],"name":"BalanceTransfer","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"from","type":"address"},{"indexed":True,"internalType":"address","name":"target","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"index","type":"uint256"}],"name":"Burn","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"underlyingAsset","type":"address"},{"indexed":True,"internalType":"address","name":"pool","type":"address"},{"indexed":False,"internalType":"address","name":"treasury","type":"address"},{"indexed":False,"internalType":"address","name":"incentivesController","type":"address"},{"indexed":False,"internalType":"uint8","name":"aTokenDecimals","type":"uint8"},{"indexed":False,"internalType":"string","name":"aTokenName","type":"string"},{"indexed":False,"internalType":"string","name":"aTokenSymbol","type":"string"},{"indexed":False,"internalType":"bytes","name":"params","type":"bytes"}],"name":"Initialized","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"from","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"},{"indexed":False,"internalType":"uint256","name":"index","type":"uint256"}],"name":"Mint","type":"event"},{"anonymous":False,"inputs":[{"indexed":True,"internalType":"address","name":"from","type":"address"},{"indexed":True,"internalType":"address","name":"to","type":"address"},{"indexed":False,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"ATOKEN_REVISION","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"DOMAIN_SEPARATOR","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"EIP712_REVISION","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PERMIT_TYPEHASH","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"POOL","outputs":[{"internalType":"contract ILendingPool","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"RESERVE_TREASURY_ADDRESS","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"UNDERLYING_ASSET_ADDRESS","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"_nonces","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"address","name":"receiverOfUnderlying","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"burn","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"getIncentivesController","outputs":[{"internalType":"contract IAaveIncentivesController","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getScaledUserBalanceAndSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"handleRepayment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"contract ILendingPool","name":"pool","type":"address"},{"internalType":"address","name":"treasury","type":"address"},{"internalType":"address","name":"underlyingAsset","type":"address"},{"internalType":"contract IAaveIncentivesController","name":"incentivesController","type":"address"},{"internalType":"uint8","name":"aTokenDecimals","type":"uint8"},{"internalType":"string","name":"aTokenName","type":"string"},{"internalType":"string","name":"aTokenSymbol","type":"string"},{"internalType":"bytes","name":"params","type":"bytes"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"mint","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"mintToTreasury","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"permit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"scaledBalanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"scaledTotalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"}],"name":"transferOnLiquidation","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"target","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferUnderlyingTo","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"}]    
     contract = web3.eth.contract(address=contract_address, abi=contract_abi)
@@ -149,6 +158,13 @@ def get_deposit_events(contract, from_block, to_block):
     # events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=latest_block)
     events = contract.events.Deposit.get_logs(fromBlock=from_block, toBlock=to_block)
 
+    return events
+
+# # takes in a contract object and returns all associated transfer events
+def get_transfer_events(contract, from_block, to_block):
+
+    events = contract.events.Transfer.get_logs(fromBlock=from_block, toBlock=to_block)
+    
     return events
 
 # # takes in a contract object and returns all associated withdrawal events
@@ -174,19 +190,14 @@ def get_repay_events(contract, from_block, to_block):
     return events
 
 #handles our weth_gateway events and returns the accurate user_address
-def handle_weth_gateway(event, contract_type):
+def handle_weth_gateway(event, enum_name):
 
-    if contract_type == 0:
-        payload_address = event['address']
-    
-    if contract_type == 1:
-        # print(event)
-        payload_address = event['args']['_borrower']
+    payload_address = event['args']['user'].lower()
 
-    elif payload_address == '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995':
-        if contract_type == 2:
+    if payload_address.lower() == '0x9546f673ef71ff666ae66d01fd6e7c6dae5a9995'.lower():
+        if enum_name == 'LEND' or enum_name == 'BORROW':
             user = 'onBehalfOf'
-            payload_address = event['args'][user]
+            payload_address = event['args'][user].lower()
     
     return payload_address
 
@@ -195,8 +206,8 @@ def tx_hash_exists(df, tx_hash):
 
     new_df = pd.DataFrame()
 
-    if ((df['tx_hash'] == tx_hash)).any():
-        new_df = df.loc[df['tx_hash'] == tx_hash]
+    if ((df['txHash'] == tx_hash)).any():
+        new_df = df.loc[df['txHash'] == tx_hash]
     
     return new_df
 
@@ -212,16 +223,10 @@ def lend_borrow_type_exists(df, lend_borrow_type):
     return df
 
 #returns df if wallet_address exists
-def wallet_address_exists(df, wallet_address, contract_type):
+def wallet_address_exists(df, wallet_address):
 
-    if contract_type == 0:
-        wallet_address_column_name = 'liquidator_address'
-    
-    elif contract_type == 1:
-        wallet_address_column_name = 'trove_owner'
-
-    if ((df[wallet_address_column_name] == wallet_address)).any():
-        df = df.loc[df[wallet_address_column_name] == wallet_address]
+    if ((df['wallet_address'] == wallet_address)).any():
+        df = df.loc[df['wallet_address'] == wallet_address]
 
     else:
         df = pd.DataFrame()
@@ -230,28 +235,28 @@ def wallet_address_exists(df, wallet_address, contract_type):
 
 # will tell us whether we need to find new data
 # returns a list of [tx_hash, wallet_address]
-def already_part_of_df(event, contract_type):
+def already_part_of_df(event, enum):
 
     all_exist = False
     tx_hash = ''
     wallet_address = ''
 
-    if contract_type == 0:
-        df = pd.read_csv('aurelius_redemption_events.csv')
-    
-    elif contract_type == 1:
-        df = pd.read_csv('aurelius_trove_updated_events.csv')
+    df = pd.read_csv('all_events.csv')
 
     tx_hash = event['transactionHash'].hex()
+    tx_hash = tx_hash.lower()
 
     new_df = tx_hash_exists(df, tx_hash)
-    wallet_address = handle_weth_gateway(event, contract_type)
 
     if len(new_df) > 0:
-        new_df = wallet_address_exists(df, wallet_address, contract_type)
+        new_df = lend_borrow_type_exists(new_df, enum)
 
         if len(new_df) > 0:
-            all_exist = True
+            wallet_address = handle_weth_gateway(event, enum).lower()
+            new_df = wallet_address_exists(df, wallet_address)
+
+            if len(new_df) > 0:
+                all_exist = True
 
     response_list = [tx_hash, wallet_address, all_exist]
 
@@ -260,18 +265,16 @@ def already_part_of_df(event, contract_type):
 #gets how many decimals our reserve is
 def get_reserve_decimals(reserve_address):
     decimals = 0
-    if reserve_address == '0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8': # WMNT
+    if reserve_address == '0x4AF15ec2A0BD43Db75dd04E62FAA3B8EF36b00d5': # dai
         decimals = 1e18
-    elif reserve_address == '0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9': # USDC
+    elif reserve_address == '0x176211869cA2b568f2A7D4EE941E073a821EE1ff': # usdc
         decimals = 1e6
-    elif reserve_address == '0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE': # USDT
+    elif reserve_address == '0xA219439258ca9da29E9Cc4cE5596924745e12B93': # usdt
         decimals = 1e6
-    elif reserve_address == '0xdEAddEaDdeadDEadDEADDEAddEADDEAddead1111': # WETH
+    elif reserve_address == '0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f': # weth
         decimals = 1e18
-    elif reserve_address == '0xCAbAE6f6Ea1ecaB08Ad02fE02ce9A44F09aebfA2': # WBTC
+    elif reserve_address == '0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4': # wbtc
         decimals = 1e8
-    elif reserve_address == '0xcda86a272531e8640cd7f1a92c01839911b90bb0': # mETH
-        decimals = 1e18
     
     return decimals
 
@@ -287,200 +290,119 @@ def get_tx_usd_amount(reserve_address, token_amount):
     # print(usd_amount)
     return usd_amount
 
-# # turns our redemption event into a dataframe and returns it
-def make_redemption_event_df(event, tx_hash, wallet_address):
-
-    df = pd.DataFrame()
-
-    tx_hash_list = []
-    liquidator_address_list = []
-    collateral_redeemed_list = []
-    number_of_collateral_redeemed_tokens_list = []
-    ern_redeemed_list = []
-    collateral_fee_list = []
-    timestamp_list = []
-    block_list = []
-
-    #adds wallet_address if it doesn't exist
-    if len(wallet_address) == 42:
-
-        block = web3.eth.get_block(event['blockNumber'])
-        block_number = int(block['number'])
-        block_list.append(block_number)
-        time.sleep(0.25)
-
-        liquidator_address_list.append(wallet_address)
-        tx_hash_list.append(tx_hash)
-        timestamp_list.append(block['timestamp'])
-        token_address = event['args']['_collateral']
-        collateral_redeemed_list.append(token_address)
-        time.sleep(0.25)
-        token_amount = event['args']['_collSent']
-        number_of_collateral_redeemed_tokens_list.append(token_amount)
-        ern_redeemed = event['args']['_actualLUSDAmount']
-        ern_redeemed_list.append(ern_redeemed)
-        time.sleep(0.25)
-        collateral_fee = event['args']['_collFee']
-        collateral_fee_list.append(collateral_fee)
-
-    df['tx_hash'] = tx_hash_list
-    df['liquidator_address'] = liquidator_address_list
-    df['collateral_redeemed'] = collateral_redeemed_list
-    df['number_of_collateral_redeemed_tokens'] = number_of_collateral_redeemed_tokens_list
-    df['ern_redeemed'] = ern_redeemed_list
-    df['collateral_fee'] = collateral_fee_list
-    df['timestamp'] = timestamp_list
-    df['block_number'] = block_list
-
-    return df
-
-# # turns our troveUpdated event into a dataframe and returns it
-def make_trove_updated_event_df(event, tx_hash, wallet_address):
-
-    df = pd.DataFrame()
-
-    tx_hash_list = []
-    trove_owner_list = []
-    collateral_redeemed_list = []
-    number_of_collateral_tokens_list = []
-    debt_list = []
-    timestamp_list = []
-    operation_list = []
-    block_list = []
-
-    #adds wallet_address if it doesn't exist
-    if len(wallet_address) == 42:
-
-        block = web3.eth.get_block(event['blockNumber'])
-        block_number = int(block['number'])
-        block_list.append(block_number)
-
-        trove_owner_list.append(wallet_address)
-        tx_hash_list.append(tx_hash)
-        timestamp_list.append(block['timestamp'])
-        token_address = event['args']['_collateral']
-        collateral_redeemed_list.append(token_address)
-        token_amount = event['args']['_coll']
-        number_of_collateral_tokens_list.append(token_amount)
-        debt = event['args']['_debt']
-        debt_list.append(debt)
-        operation = int(event['args']['_operation'])
-        operation_list.append(operation)
-
-    df['tx_hash'] = tx_hash_list
-    df['trove_owner'] = trove_owner_list
-    df['collateral_redeemed'] = collateral_redeemed_list
-    df['number_of_collateral_tokens'] = number_of_collateral_tokens_list
-    df['debt'] = debt_list
-    df['operation'] = operation_list
-    df['timestamp'] = timestamp_list
-    df['block_number'] = block_list
-
-    return df
-
 #makes our dataframe
-def user_data(events, contract_type):
+def user_data(events):
     
     df = pd.DataFrame()
 
-    redemption_df_list = []
+    tx_hash_list = []
+    from_list = []
+    to_list = []
+    timestamp_list = []
+    token_address_list = []
+    token_symbol_list = []
+    token_amount_list = []
+    block_list = []
 
     user = ''
 
     start_time = time.time()
-
     i = 1
     for event in events:
-        time.sleep(1.25)
-        
-        print(contract_type, ' Batch of Events Processed: ', i, '/', len(events))
-            
-        exists_list = already_part_of_df(event, contract_type)
 
-        tx_hash = exists_list[0]
-        wallet_address = exists_list[1]
-        exists = exists_list[2]
-
-        if exists == False and len(wallet_address) == 42: 
-            if contract_type == 0:
-                df = make_redemption_event_df(event, tx_hash, wallet_address)
-            if contract_type == 1:
-                df = make_trove_updated_event_df(event, tx_hash, wallet_address)
-            
-            else:
-                pass
-
+        counter = 0
+        print('Batch of Events Processed: ', i, '/', len(events))
         i+=1
 
-    if len(df) < 1:
-        if contract_type == 0:
-            df = make_redemption_event_df(event, tx_hash, '')
-        
-        elif contract_type == 1:
-            df = make_trove_updated_event_df(event, '', '')
-    
-    # print('User Data Event Looping done in: ', time.time() - start_time)
-    return df
+        from_address = event['args']['from']
 
+        if from_address == '0x0000000000000000000000000000000000000000':
+            counter += 1
+
+            if counter == 1:
+                to_address = event['args']['to']
+                counter += 1
+
+        if counter == 2:
+            time.sleep(0.1)
+            
+
+            tx_hash = event['transactionHash'].hex()
+            tx_hash_list.append(tx_hash)
+            from_list.append(from_address)
+            to_list.append(to_address)
+
+            block = web3.eth.get_block(event['blockNumber'])
+            block_number = int(block['number'])
+            block_list.append(block_number)
+
+            timestamp_list.append(block['timestamp'])
+            token_address = event['address']
+            token_address_list.append(token_address)
+            
+            token_id = get_token_id(token_address)
+
+            token_symbol = get_token_symbol(token_id)
+            token_symbol_list.append(token_symbol)
+            token_volume = event['args']['value']
+
+            token_amount = get_clean_token_amount(token_id, token_volume)
+            token_amount_list.append(token_amount)
+
+    df['tx_hash'] = tx_hash_list
+    df['from_address'] = from_list
+    df['to_address'] = to_list
+    df['timestamp'] = timestamp_list
+    df['token_address'] = token_address_list
+    df['token_symbol'] = token_symbol_list
+    df['token_amount'] = token_amount_list
+    df['block_number'] = block_list
+
+    return df
 
 # # runs all our looks
 # # updates our csv
-def find_all_transactions(contract_address):
+def find_all_transactions():
 
-    # -1 = default, 0 = troveManager
-    contract_type = -1
+    reserve_df = get_reserve_data()
 
-    interval = 9555
-
-    from_block = 51922528 # when the contract was made
-    # # from_block = 61327139
-    to_block = from_block + interval
-
-    if contract_address in TROVE_MANAGER_LIST or contract_address in BORROWER_OPERATIONS_LIST:
-        contract_type = 0
-    
-    if contract_type == 0:
-        abi = get_trove_manager_contract_abi()
-
-    aurelius_contract = get_contract(contract_address, abi)
+    a_token_list = ['0x37FA438EdfB7044E9444b4022b2516C4dAA4592F', '0x18bA3e87876f4982810d321D447b81d01Cdf6668', '0x475f3ab387157ebc645874aea1836223b7cc5d19', '0x73d49aC28C4Fea2B8e7C6BF45d64A2e68ed53bE0', '0x7f5eC43a46dF54471DAe95d3C05BEBe7301b75Ff']
 
     latest_block = web3.eth.get_block('latest')
     latest_block = int(latest_block['number'])
+
+    event_df = pd.read_csv('all_events.csv')
+
+    try:
+        from_block = int(max(event_df['block_number']))
+    except:
+        from_block = FROM_BLOCK
+
+    # from_block = FROM_BLOCK
     
-    # if contract_type == 0:
-    #     df = pd.read_csv('aurelius_redemption_events.csv')
-    # # handles empty csv files
-    # try:
-    #     from_block = int(max(df['block_number']))
-    # except:
-    #     from_block = FROM_BLOCK
-    
+    # from_block = 2869000
+
+    interval = 20000
+
+    # to_block = from_block + 955
     to_block = from_block + interval
 
-    while to_block < latest_block:
+    contract_list = [get_a_token_contract(token) for token in a_token_list]
 
+    while to_block < latest_block:
         print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block, 'Blocks Remaining: ', latest_block - from_block)
 
-        aurelius_redemption_events = get_redemption_events(aurelius_contract, from_block, to_block)
-        aurelius_trove_updated_events = get_trove_updated_events(aurelius_contract, from_block, to_block)
-        
+        for contract in contract_list:
 
-        if len(aurelius_redemption_events) > 0:
-            contract_type = 0
-            df = user_data(aurelius_redemption_events, contract_type)
-            make_user_data_csv(df, contract_type)
-        
-        if len(aurelius_trove_updated_events) > 0:
-            contract_type = 1
-            df = user_data(aurelius_trove_updated_events, contract_type)
-            make_user_data_csv(df, contract_type)
-
+            transfer_events = get_transfer_events(contract, from_block, to_block)
+            if len(transfer_events) > 0:
+                transfer_df = user_data(transfer_events)
+                make_user_data_csv(transfer_df)
+            time.sleep(1)
         from_block += interval
         to_block += interval
 
-        # print(deposit_events)
-
-        time.sleep(2.5)
+        time.sleep(.25)
 
         if from_block >= latest_block:
             from_block = latest_block - 1
@@ -488,7 +410,7 @@ def find_all_transactions(contract_address):
         if to_block >= latest_block:
             to_block = latest_block
     
-    return
+    return transfer_df
 
 # Gets transactions of all blocks within a specified range and returns a df with info from blocks that include our contract
 def get_all_gateway_transactions():
@@ -551,65 +473,64 @@ def get_all_gateway_transactions():
 
     make_user_data_csv(df)
 
-# returns a list of borrowers who have been redeemed
-def get_redeemed_trove_owner_address_list(redemption_df, trove_updated_df):
+# # makes deposits and borrows positive numbers
+# # makes withdrawals and repays as negative numbers
+def prep_balance_df():
 
-    unique_redemption_user_df = redemption_df.drop_duplicates(subset=['tx_hash'])
+    df_list = []
 
-    redemption_tx_hash_list = unique_redemption_user_df['tx_hash'].tolist()
+    df = pd.read_csv('all_events.csv')
 
-    trove_updated_redemption_tx_list = [trove_updated_df.loc[trove_updated_df['tx_hash'] == x] for x in redemption_tx_hash_list]
+    deposit_df = df.loc[df['lendBorrowType'] == 'DEPOSIT']
 
-    trove_updated_redemption_df = pd.concat(trove_updated_redemption_tx_list)
+    withdraw_df = df.loc[df['lendBorrowType'] == 'WITHDRAW']
+    withdraw_df['tokenUSDAmount'] *= -1
 
-    trove_updated_redemption_df = trove_updated_redemption_df.drop_duplicates(subset=['tx_hash'])
+    borrow_df = df.loc[df['lendBorrowType'] == 'BORROW']
 
-    unique_redeemed_trove_owner_address_list = trove_updated_redemption_df['trove_owner'].tolist()
+    repay_df = df.loc[df['lendBorrowType'] == 'REPAY']
+    repay_df['tokenUSDAmount'] *= -1
 
-    return unique_redeemed_trove_owner_address_list
+    df_list = [deposit_df, withdraw_df, borrow_df, repay_df]
 
-# # calculates a users rolling trove balance
-def calculate_user_balance_history(trove_owner_df, redemption_df, trove_updated_df):
+    df = pd.concat(df_list)
 
-    trove_owner_df = trove_owner_df.sort_values(by=['block_number'], ascending=False)
-    trove_owner_df = trove_owner_df.reset_index(drop=True)
+    df['blockNumber'] = df['blockNumber'].astype(int)
 
-    trove_owner_df['number_of_collateral_tokens'] = trove_owner_df['number_of_collateral_tokens'].astype(float)
-    trove_owner_df['debt'] = trove_owner_df['debt'].astype(float)
-    print(trove_owner_df.dtypes)
-    
-    trove_owner_df['collateral_change'] = trove_owner_df['number_of_collateral_tokens'].diff()
-    trove_owner_df['debt_change'] = trove_owner_df['debt'].diff()
-    print(trove_owner_df)
+    # df['user'] = df['wallet_address']
+    # df['pool'] = '0x6997BA833148cA964ab51E4dF889b4b2a4Fc0B0d'
+    # df['position'] = 0
+    # df['lpvalue'] = 0
 
-    return trove_owner_df
+    # print(df)
+    return df
 
-# # finds our rolling balance for each redeemed trove_owner
-def get_redeemed_user_trove_history(redemption_df, trove_updated_df):
+# calculates the rolling balances of lps
+def find_rolling_lp_balance(df):
 
-    unique_redeemed_trove_owner_list = get_redeemed_trove_owner_address_list(redemption_df, trove_updated_df)
-    
-    for trove_owner in unique_redeemed_trove_owner_list:
-        trove_owner_df = trove_updated_df.loc[trove_updated_df['trove_owner'] == trove_owner]
-        unique_collateral_list = trove_owner_df.collateral_redeemed.unique()
-        
+    df['user'] = df['wallet_address']
+    df['pool'] = '0x6997BA833148cA964ab51E4dF889b4b2a4Fc0B0d'
+    df['position'] = 0
+    df['lpvalue'] = 0
+    df['block'] = df['blockNumber']
 
-        for collateral in unique_collateral_list:
-            user_collateral_df = trove_owner_df.loc[trove_owner_df['collateral_redeemed'] == collateral]
-            user_collateral_df = calculate_user_balance_history(user_collateral_df, redemption_df, trove_updated_df)
+    df = df.sort_values(by=['blockNumber'])
 
-        print(trove_owner)
-        print(trove_owner_df)
+    calculated_df = df[['user', 'pool', 'block', 'position', 'lpvalue']]
 
-    return
-# # troveManager
-# contract_address = '0x295c6074F090f85819cbC911266522e43A8e0f4A'
-# # borrowerOperations
-# contract_address = '0x4Cd23F2C694F991029B85af5575D0B5E70e4A3F1'
+    calculated_df['lpvalue'] = df.groupby('user')['tokenUSDAmount'].transform(pd.Series.cumsum)
 
-# find_all_transactions(contract_address)
+    calculated_df = calculated_df.sort_values(by=['block'], ascending=False)
+    calculated_df = calculated_df.reset_index(drop=True)
 
-redemption_df = pd.read_csv('aurelius_redemption_events.csv')
-trove_updated_df = pd.read_csv('aurelius_trove_updated_events.csv')
+    print(calculated_df)
 
-get_redeemed_user_trove_history(redemption_df, trove_updated_df)
+    calculated_df.to_csv('outputData.csv', index=False)
+
+    calculated_df.to_json('outputData.json', orient='records')
+    return df
+
+find_all_transactions()
+
+# df = prep_balance_df()
+# find_rolling_lp_balance(df)
