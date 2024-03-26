@@ -533,12 +533,12 @@ def find_rolling_lp_balance(df):
 # # Makes a day column that is the same as used in dune
 def format_df_timestamp(csv_name):
     df = pd.read_csv(csv_name)
-    
+
     df['day'] = pd.to_datetime(df['timestamp'], unit='s').dt.tz_localize(None)
 
     df['day'] = df['day'].dt.strftime('%Y-%m-%d %H:%M')
 
-    df.to_csv(csv_name)
+    df.to_csv(csv_name, index=False)
     return
 
 # find_all_transactions()
