@@ -538,6 +538,8 @@ def format_df_timestamp(csv_name):
 
     df['day'] = df['day'].dt.strftime('%Y-%m-%d %H:%M')
 
+    df['day'] = df['day'].astype(str)
+
     df.to_csv(csv_name, index=False)
     return
 
