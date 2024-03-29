@@ -574,8 +574,85 @@ def find_unique_wallet_addresses(csv_name, chain_name):
     combined_df.to_csv('grain_lge_wallets.csv', index=False)
     return
 
-def find_vest_amounts():
+def get_ui_data_provider_contract(contract_address):
+    contract_abi =  [{"inputs":[{"internalType":"address","name":"_lge","type":"address"},{"internalType":"address","name":"_grainSaleClaim","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"MAX_KINK_RELEASES","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_RELEASES","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PERCENT_DIVISOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"PERIOD","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getNumberOfReleases","outputs":[{"internalType":"uint256","name":"numberOfReleases","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getPending","outputs":[{"internalType":"uint256","name":"claimable","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getTotalClaimed","outputs":[{"internalType":"uint256","name":"totalClaimed","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getTotalOwed","outputs":[{"internalType":"uint256","name":"userTotal","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserData","outputs":[{"components":[{"internalType":"uint256","name":"numberOfReleases","type":"uint256"},{"internalType":"uint256","name":"totalOwed","type":"uint256"},{"internalType":"uint256","name":"pending","type":"uint256"},{"internalType":"uint256","name":"totalClaimed","type":"uint256"},{"internalType":"uint256","name":"userGrainLeft","type":"uint256"}],"internalType":"struct UiDataProvider.UserData","name":"userData","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserGrainLeft","outputs":[{"internalType":"uint256","name":"grainLeft","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getUserTotalWeight","outputs":[{"internalType":"uint256","name":"totalWeight","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"grainSaleClaim","outputs":[{"internalType":"contract IGrainSaleClaim","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lge","outputs":[{"internalType":"contract IGrainLGE","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"maxDiscount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"maxKinkDiscount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
     
+    return contract
+
+# # finds the remaining vest amount for a given contract and wallet address
+def find_vest_amount(contract, wallet_address):
+    
+    wallet_address = Web3.to_checksum_address(wallet_address)
+
+    vest_amount = contract.functions.getUserGrainLeft(wallet_address).call()
+
+    vest_amount = vest_amount / 1e18
+
+    return vest_amount
+
+def make_vest_df():
+    rpc_list = ['https://fantom.blockpi.network/v1/rpc/public', 'https://rpc-mainnet.matic.quiknode.pro', 'https://optimism.gateway.tenderly.co', 'https://andromeda.metis.io', 
+                'https://arb-mainnet-public.unifra.io', 'https://public.stackup.sh/api/v1/node/bsc-mainnet', 'https://eth-pokt.nodies.app']
+    
+    contract_address_list = ['0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e']
+
+    chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
+
+    df_list = []
+
+    lge_df = pd.read_csv('grain_lge_wallets.csv')
+
+    i = 0
+
+    # # iterates through each chain
+    while i < len(rpc_list):
+
+        rpc_url = rpc_list[i]
+        contract_address = contract_address_list[0]
+        chain = chain_list[i]
+
+        web3 = Web3(Web3.HTTPProvider(rpc_url))
+        web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+        contract = get_ui_data_provider_contract(contract_address)
+
+        df = lge_df.loc[lge_df['chain'] == chain]
+
+        wallet_address_list = df['wallet_address'].to_list()
+
+        wallet_vest_list = []
+        remaining_vest_amount_list = []
+
+        chain_df = pd.DataFrame()
+
+        wallets_checked = 1
+        # # iterates through every wallet on a specific chain
+        for wallet_address in wallet_address_list:
+            remaining_vest_amount = find_vest_amount(contract, wallet_address)
+
+            if remaining_vest_amount > 0:
+                wallet_vest_list.append(wallet_address)
+                remaining_vest_amount_list.append(remaining_vest_amount)
+            
+            time.sleep(0.25)
+
+            print(wallets_checked, ' / ', len(wallet_address_list), ' ', chain , ' Wallets Remaining: ', len(wallet_address_list) - wallets_checked)
+            wallets_checked += 1
+
+        print(chain, ' Chain Complete')
+        chain_df['wallet_address'] = wallet_vest_list
+        chain_df['remaining_vest'] = remaining_vest_amount_list
+        chain_df['chain'] = chain
+
+        df_list.append(chain_df)
+        print(chain_df)
+
+        i += 1
+
+    combined_df = pd.concat(df_list)
+
+    combined_df.to_csv('grain_remaining_vests.csv')
     return
 # # find_all_transactions()
 
@@ -584,3 +661,5 @@ def find_vest_amounts():
 # find_unique_wallet_addresses(csv_name, 'METIS')
 
 # format_df_timestamp(csv_name)
+
+make_vest_df()
