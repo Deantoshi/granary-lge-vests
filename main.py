@@ -333,7 +333,7 @@ def user_data(events):
 
             tx_hash = event['transactionHash'].hex()
             tx_hash_list.append(tx_hash)
-            from_list.append('0x00')
+            from_list.append(event['args']['from'])
             to_list.append(to_address)
 
             block = web3.eth.get_block(event['blockNumber'])
@@ -550,8 +550,37 @@ def format_df_timestamp(csv_name):
     df.to_csv(csv_name, index=False)
     return
 
-find_all_transactions()
+# # finds the unique wallet addresses from our transactions
+def find_unique_wallet_addresses(csv_name, chain_name):
+
+    df = pd.read_csv(csv_name)
+    print(df)
+
+    unique_wallet_list = df.from_address.unique()
+
+    new_df = pd.DataFrame()
+
+    new_df['wallet_address'] = unique_wallet_list
+    new_df['chain'] = 'METIS'
+
+    lge_df = pd.read_csv('grain_lge_wallets.csv')
+
+    df_list = [new_df, lge_df]
+
+    combined_df = pd.concat(df_list)
+
+    print(combined_df)
+
+    combined_df.to_csv('grain_lge_wallets.csv', index=False)
+    return
+
+def find_vest_amounts():
+    
+    return
+# # find_all_transactions()
 
 # csv_name = 'all_events.csv'
+
+# find_unique_wallet_addresses(csv_name, 'METIS')
 
 # format_df_timestamp(csv_name)
