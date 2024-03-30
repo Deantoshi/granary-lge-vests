@@ -665,6 +665,23 @@ def make_vest_df():
         i += 1
 
     return
+
+
+# # returns how much grain there is to be claimed
+def find_claim_total(contract, wallet_address):
+
+    grain_amount = contract.functions.balanceOf(wallet_address).call()
+
+    grain_amount = grain_amount / 1e18
+
+    return grain_amount
+
+contract = get_token_contract('0xfD389Dc9533717239856190F42475d3f263a270d')
+
+total_claim_amount = find_claim_total(contract, '0x99f7f1A1dD30457dFaD312b4064Fa4Ad4B73B2d7')
+
+print(total_claim_amount)
+
 # # find_all_transactions()
 
 # csv_name = 'all_events.csv'
@@ -673,10 +690,16 @@ def make_vest_df():
 
 # format_df_timestamp(csv_name)
 
-make_vest_df()
+# make_vest_df()
 
 # contract_address = '0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e'
 
 # contract = get_ui_data_provider_contract(contract_address)
 
 # find_vest_amount(contract, wallet_address)
+
+# vest_df = pd.read_csv('grain_remaining_vests.csv')
+
+# vest_df = vest_df.loc[vest_df['chain'] == 'OP']
+
+# print(vest_df['remaining_vest'].sum())
