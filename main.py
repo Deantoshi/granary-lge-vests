@@ -4,8 +4,8 @@ import pandas as pd
 import time
 
 # Replace with the actual Optimism RPC URL
-rpc_url = 'https://andromeda.metis.io'
-# # rpc_url = ''
+# rpc_url = 'https://andromeda.metis.io'
+rpc_url = 'https://gateway.tenderly.co/public/optimism'
 
 # Create a Web3 instance to connect to the Optimism blockchain
 web3 = Web3(Web3.HTTPProvider(rpc_url))
@@ -134,6 +134,22 @@ def make_user_data_csv(df):
         print('Event CSV Updated')
     return
 
+#makes a dataframe and stores it in a csv file
+def make_lge_data_csv(df):
+    old_df = pd.read_csv('grain_remaining_vests.csv')
+    old_df = old_df.drop_duplicates(subset=['wallet_address','remaining_vest','chain'], keep='last')
+
+    combined_df_list = [df, old_df]
+    combined_df = pd.concat(combined_df_list)
+    combined_df = combined_df.drop_duplicates(subset=['wallet_address','remaining_vest','chain'], keep='last')
+
+    # combined_df = make_checksum_values(combined_df)
+
+    if len(combined_df) >= len(old_df):
+        combined_df.to_csv('grain_remaining_vests.csv', index=False)
+        print('Event CSV Updated')
+    return
+
 # # takes in an a_token address and returns it's contract object
 def get_a_token_contract(contract_address):
     
@@ -209,12 +225,12 @@ def handle_weth_gateway(event, enum_name):
     return payload_address
 
 #returns a df if a tx_hash exists
-def tx_hash_exists(df, tx_hash):
+def chain_exists(df, chain):
 
     new_df = pd.DataFrame()
 
-    if ((df['txHash'] == tx_hash)).any():
-        new_df = df.loc[df['txHash'] == tx_hash]
+    if ((df['chain'] == tx_hash)).any():
+        new_df = df.loc[df['chain'] == chain]
     
     return new_df
 
@@ -241,33 +257,22 @@ def wallet_address_exists(df, wallet_address):
     return df
 
 # will tell us whether we need to find new data
-# returns a list of [tx_hash, wallet_address]
-def already_part_of_df(event, enum):
+# returns a boolean
+def already_part_of_df(chain, wallet_address):
 
     all_exist = False
-    tx_hash = ''
-    wallet_address = ''
 
-    df = pd.read_csv('all_events.csv')
+    df = pd.read_csv('grain_remaining_vests.csv')
 
-    tx_hash = event['transactionHash'].hex()
-    tx_hash = tx_hash.lower()
-
-    new_df = tx_hash_exists(df, tx_hash)
+    new_df = wallet_address_exists(df, wallet_address)
 
     if len(new_df) > 0:
-        new_df = lend_borrow_type_exists(new_df, enum)
+        new_df = chain_exists(df, chain)
 
         if len(new_df) > 0:
-            wallet_address = handle_weth_gateway(event, enum).lower()
-            new_df = wallet_address_exists(df, wallet_address)
+            all_exist = True
 
-            if len(new_df) > 0:
-                all_exist = True
-
-    response_list = [tx_hash, wallet_address, all_exist]
-
-    return response_list
+    return all_exist
 
 #gets how many decimals our reserve is
 def get_reserve_decimals(reserve_address):
@@ -581,11 +586,11 @@ def get_ui_data_provider_contract(contract_address):
     return contract
 
 # # finds the remaining vest amount for a given contract and wallet address
-def find_vest_amount(contract, wallet_address):
+def find_vest_amount(contract, wallet_address, wait_time):
     
-    wallet_address = Web3.to_checksum_address(wallet_address)
-
     vest_amount = contract.functions.getUserGrainLeft(wallet_address).call()
+    
+    time.sleep(wait_time)
 
     vest_amount = vest_amount / 1e18
 
@@ -627,15 +632,24 @@ def make_vest_df():
         chain_df = pd.DataFrame()
 
         wallets_checked = 1
+
+        wallet_address_list = [Web3.to_checksum_address(x) for x in wallet_address_list]
+
         # # iterates through every wallet on a specific chain
         for wallet_address in wallet_address_list:
-            remaining_vest_amount = find_vest_amount(contract, wallet_address)
+
+            # exists = already_part_of_df(chain, wallet_address)
+
+            # if exists == True:
+            # print(wallet_address, ': ', remaining_vest_amount)
+            wait_time = 0.5
+
+            remaining_vest_amount = find_vest_amount(contract, wallet_address, wait_time)
 
             if remaining_vest_amount > 0:
                 wallet_vest_list.append(wallet_address)
                 remaining_vest_amount_list.append(remaining_vest_amount)
             
-            time.sleep(0.25)
 
             print(wallets_checked, ' / ', len(wallet_address_list), ' ', chain , ' Wallets Remaining: ', len(wallet_address_list) - wallets_checked)
             wallets_checked += 1
@@ -644,15 +658,12 @@ def make_vest_df():
         chain_df['wallet_address'] = wallet_vest_list
         chain_df['remaining_vest'] = remaining_vest_amount_list
         chain_df['chain'] = chain
+        make_lge_data_csv(chain_df)
 
-        df_list.append(chain_df)
         print(chain_df)
 
         i += 1
 
-    combined_df = pd.concat(df_list)
-
-    combined_df.to_csv('grain_remaining_vests.csv')
     return
 # # find_all_transactions()
 
@@ -663,3 +674,9 @@ def make_vest_df():
 # format_df_timestamp(csv_name)
 
 make_vest_df()
+
+# contract_address = '0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e'
+
+# contract = get_ui_data_provider_contract(contract_address)
+
+# find_vest_amount(contract, wallet_address)
