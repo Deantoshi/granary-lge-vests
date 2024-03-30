@@ -229,7 +229,7 @@ def chain_exists(df, chain):
 
     new_df = pd.DataFrame()
 
-    if ((df['chain'] == tx_hash)).any():
+    if ((df['chain'] == chain)).any():
         new_df = df.loc[df['chain'] == chain]
     
     return new_df
@@ -266,8 +266,12 @@ def already_part_of_df(chain, wallet_address):
 
     new_df = wallet_address_exists(df, wallet_address)
 
+    print(new_df)
+
     if len(new_df) > 0:
-        new_df = chain_exists(df, chain)
+        new_df = chain_exists(new_df, chain)
+        
+        print(new_df)
 
         if len(new_df) > 0:
             all_exist = True
@@ -608,7 +612,7 @@ def make_vest_df():
 
     lge_df = pd.read_csv('grain_lge_wallets.csv')
 
-    i = 0
+    i = 3
 
     # # iterates through each chain
     while i < len(rpc_list):
@@ -635,20 +639,20 @@ def make_vest_df():
 
         wallet_address_list = [Web3.to_checksum_address(x) for x in wallet_address_list]
 
+        wait_time = 0.5
+
         # # iterates through every wallet on a specific chain
         for wallet_address in wallet_address_list:
 
-            # exists = already_part_of_df(chain, wallet_address)
+            exists = already_part_of_df(chain, wallet_address)
 
-            # if exists == True:
-            # print(wallet_address, ': ', remaining_vest_amount)
-            wait_time = 0.5
+            if exists == True:
 
-            remaining_vest_amount = find_vest_amount(contract, wallet_address, wait_time)
+                remaining_vest_amount = find_vest_amount(contract, wallet_address, wait_time)
 
-            if remaining_vest_amount > 0:
-                wallet_vest_list.append(wallet_address)
-                remaining_vest_amount_list.append(remaining_vest_amount)
+                if remaining_vest_amount > 0:
+                    wallet_vest_list.append(wallet_address)
+                    remaining_vest_amount_list.append(remaining_vest_amount)
             
 
             print(wallets_checked, ' / ', len(wallet_address_list), ' ', chain , ' Wallets Remaining: ', len(wallet_address_list) - wallets_checked)
@@ -676,13 +680,13 @@ def find_claim_total(contract, wallet_address):
 
     return grain_amount
 
-contract = get_token_contract('0xfD389Dc9533717239856190F42475d3f263a270d')
+# contract = get_token_contract('0xfD389Dc9533717239856190F42475d3f263a270d')
 
-total_claim_amount = find_claim_total(contract, '0x99f7f1A1dD30457dFaD312b4064Fa4Ad4B73B2d7')
+# total_claim_amount = find_claim_total(contract, '0x99f7f1A1dD30457dFaD312b4064Fa4Ad4B73B2d7')
 
-print(total_claim_amount)
+# print(total_claim_amount)
 
-# # find_all_transactions()
+# find_all_transactions()
 
 # csv_name = 'all_events.csv'
 
@@ -690,7 +694,7 @@ print(total_claim_amount)
 
 # format_df_timestamp(csv_name)
 
-# make_vest_df()
+make_vest_df()
 
 # contract_address = '0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e'
 
