@@ -416,14 +416,14 @@ def find_chains_vested_grain(chain_index):
     chain_symbol = chain_info_list[1]
     token_contract = chain_info_list[2]
     grain_sale_claim_contract_address = chain_info_list[3]
-    ui_data_provider_contract = chain_info_list[4]
+    ui_data_provider_contract_address = chain_info_list[4]
 
     total_grain_to_claim = -1
     grain_found = 0
     
     need_to_find_more_grain = True
 
-    wait_time = 1
+    wait_time = 1.5
     i = 0
 
     while i < len(rpc_url_list):
@@ -445,7 +445,7 @@ def find_chains_vested_grain(chain_index):
 
             print(total_grain_to_claim)
 
-        ui_data_provider_contract = get_ui_data_provider_contract(ui_data_provider_contract, web3)
+        ui_data_provider_contract = get_ui_data_provider_contract(ui_data_provider_contract_address, web3)
 
         grain_found += loop_through_rpc(df, ui_data_provider_contract, wait_time, total_grain_to_claim)
 
@@ -469,7 +469,7 @@ def make_vest_df():
 
     chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
 
-    i = 3
+    i = 0
 
     # # iterates through each chain
     while i < len(chain_list):
