@@ -406,9 +406,34 @@ def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
     
     return grain_found
 
+# # mmakes our web3 object and injects it's middleware
+def get_web_3(rpc_url):
+    web3 = Web3(Web3.HTTPProvider(rpc_url))
+    time.sleep(2.5)
+    print('Web3: ', web3)
+    web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    time.sleep(2.5)
+    
+    return web3
+
+def find_single_rpc_vests(lge_csv, chain, token_contract, ui_data_provider_contract_address, wait_time, total_grain_to_claim):
+
+    lge_df = pd.read_csv(lge_csv)
+    df = lge_df.loc[lge_df['chain'] == chain]
+    
+    web3 = get_web_3(rpc_url)
+
+    token_contract = get_token_contract(token_contract, web3)
+
+    ui_data_provider_contract = get_ui_data_provider_contract(ui_data_provider_contract_address, web3)
+
+    grain_found = loop_through_rpc(df, ui_data_provider_contract, wait_time, total_grain_to_claim)
+
+    return grain_found
+
 # # finds the total grain of a chain
 # # then runs through different RPCs for that chain to try to find all grain
-def find_chains_vested_grain(chain_index):
+def find_chains_vested_grain(chain_index, lge_csv):
     
     chain_info_list = get_chain_info(chain_index)
 
@@ -428,26 +453,10 @@ def find_chains_vested_grain(chain_index):
 
     while i < len(rpc_url_list):
 
-        lge_df = pd.read_csv('grain_lge_wallets.csv')
-        df = lge_df.loc[lge_df['chain'] == chain_symbol]
-
-        rpc_url = rpc_url_list[i]
         
-        web3 = Web3(Web3.HTTPProvider(rpc_url))
-        time.sleep(2.5)
-        print('Web3: ', web3)
-        web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        time.sleep(2.5)
+        total_grain_to_claim = find_claim_total(token_contract, grain_sale_claim_contract_address)
 
-        if i == 0:
-            token_contract = get_token_contract(token_contract, web3)
-            total_grain_to_claim = find_claim_total(token_contract, grain_sale_claim_contract_address)
-
-            print(total_grain_to_claim)
-
-        ui_data_provider_contract = get_ui_data_provider_contract(ui_data_provider_contract_address, web3)
-
-        grain_found += loop_through_rpc(df, ui_data_provider_contract, wait_time, total_grain_to_claim)
+        grain_found += find_single_rpc_vests(lge_csv, chain_symbol, token_contract, ui_data_provider_contract_address, wait_time, total_grain_to_claim)
 
         if grain_found > total_grain_to_claim - 100:
             print(grain_found, ' / ', total_grain_to_claim, ' Grain Found. Grain Remaining:', total_grain_to_claim - grain_found)
@@ -465,16 +474,19 @@ def find_chains_vested_grain(chain_index):
 
     return
 
+# # will loop through each chain to look for wallet vest amounts
 def make_vest_df():
 
     chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
+
+    lge_csv = 'grain_lge_wallets.csv'
 
     i = 0
 
     # # iterates through each chain
     while i < len(chain_list):
 
-        find_chains_vested_grain(i)
+        find_chains_vested_grain(i, lge_csv)
 
     
         i += 1
