@@ -230,32 +230,9 @@ def user_data(events):
 
     return df
 
-# # runs all our looks
-# # updates our csv
-def find_all_transactions():
+# # will find all the transfer events for a token given a certain chain's rpc
+def find_all_chain_transactions(rpc_url, token_list, latest_block, from_block, interval):
 
-    token_list = ["0xEA32A96608495e54156Ae48931A7c20f0dcc1a21", "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000", "0xbB06DCA3AE6887fAbF931640f67cab3e3a16F4dC", "0x420000000000000000000000000000000000000A"]
-
-    latest_block = 5221891
-    from_block = 5109933
-
-    # latest_block = web3.eth.get_block('latest')
-    # latest_block = int(latest_block['number'])
-
-    # event_df = pd.read_csv('all_events.csv')
-
-    # try:
-    #     from_block = int(max(event_df['block_number']))
-    # except:
-    #     from_block = FROM_BLOCK
-
-    # from_block = FROM_BLOCK
-    
-    # from_block = 2869000
-
-    interval = 20000
-
-    # to_block = from_block + 955
     to_block = from_block + interval
 
     contract_list = [get_token_contract(token) for token in token_list]
@@ -270,6 +247,8 @@ def find_all_transactions():
                 transfer_df = user_data(transfer_events)
                 make_user_data_csv(transfer_df)
             time.sleep(1)
+        
+        # increments our block ranges
         from_block += interval
         to_block += interval
 
@@ -280,6 +259,68 @@ def find_all_transactions():
         
         if to_block >= latest_block:
             to_block = latest_block
+
+    return transfer_df
+
+# # runs all our looks
+# # updates our csv
+def find_all_transactions():
+    
+    chain_index = 0
+
+    while chain_index < 7:
+        chain_info_list = get_chain_info(chain_index)
+        rpc_url_list = chain_info_list[0]
+        rpc_url = rpc_url_list[0]
+
+    find_all_chain_transactions(rpc_url)
+
+    # token_list = ["0xEA32A96608495e54156Ae48931A7c20f0dcc1a21", "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000", "0xbB06DCA3AE6887fAbF931640f67cab3e3a16F4dC", "0x420000000000000000000000000000000000000A"]
+
+    # latest_block = 5221891
+    # from_block = 5109933
+
+    # # latest_block = web3.eth.get_block('latest')
+    # # latest_block = int(latest_block['number'])
+
+    # # event_df = pd.read_csv('all_events.csv')
+
+    # # try:
+    # #     from_block = int(max(event_df['block_number']))
+    # # except:
+    # #     from_block = FROM_BLOCK
+
+    # # from_block = FROM_BLOCK
+    
+    # # from_block = 2869000
+
+    # interval = 20000
+
+    # # to_block = from_block + 955
+    # to_block = from_block + interval
+
+    # contract_list = [get_token_contract(token) for token in token_list]
+
+    # while to_block < latest_block:
+    #     print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block, 'Blocks Remaining: ', latest_block - from_block)
+
+    #     for contract in contract_list:
+
+    #         transfer_events = get_transfer_events(contract, from_block, to_block)
+    #         if len(transfer_events) > 0:
+    #             transfer_df = user_data(transfer_events)
+    #             make_user_data_csv(transfer_df)
+    #         time.sleep(1)
+    #     from_block += interval
+    #     to_block += interval
+
+    #     time.sleep(.25)
+
+    #     if from_block >= latest_block:
+    #         from_block = latest_block - 1
+        
+    #     if to_block >= latest_block:
+    #         to_block = latest_block
     
     return transfer_df
 
@@ -357,6 +398,25 @@ def get_chain_info(chain_index):
     chain_info_list = [rpc_combined_list[chain_index], chain_list[chain_index], token_contract_list[chain_index], grain_sale_claim_list[chain_index], ui_data_provider_list[0]]
 
     return chain_info_list
+
+# # gets our to block
+def get_transaction_to_block(chain_index):
+    chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
+
+    to_block_list = [58881393, 41035952, 85523772, 5221891, 76172561, 26984331, 16957713]
+
+    to_block = to_block_list[chain_index]
+
+    return to_block
+
+# # gets our from block
+def get_transaction_from_block(chain_index):
+    chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
+    from_block_list = [57841624, 40486218, 81872542, 5110013, 71059329, 26569086, 16854057]
+
+    from_block = from_block_list[chain_index]
+
+    return from_block
 
 # # will loop through one RPC iteration
 def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
