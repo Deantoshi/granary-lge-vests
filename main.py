@@ -164,7 +164,7 @@ def already_part_of_df(chain, wallet_address):
     return all_exist
 
 #makes our dataframe
-def user_data(events):
+def user_data(events, web3):
     
     df = pd.DataFrame()
 
@@ -195,15 +195,18 @@ def user_data(events):
 
         if counter == 2:
             time.sleep(0.1)
-            
 
             tx_hash = event['transactionHash'].hex()
             tx_hash_list.append(tx_hash)
-            from_list.append(event['args']['from'])
+            from_address = event['args']['from']
+            from_list.append(from_address)
             to_list.append(to_address)
 
             block = web3.eth.get_block(event['blockNumber'])
             block_number = int(block['number'])
+
+            if int(block_number) == 5190033:
+                print(event)
             block_list.append(block_number)
 
             timestamp_list.append(block['timestamp'])
@@ -231,11 +234,13 @@ def user_data(events):
     return df
 
 # # will find all the transfer events for a token given a certain chain's rpc
-def find_all_chain_transactions(rpc_url, token_list, latest_block, from_block, interval):
+def find_chain_transactions(rpc_url, token_list, latest_block, from_block, interval):
 
     to_block = from_block + interval
 
-    contract_list = [get_token_contract(token) for token in token_list]
+    web3 = get_web_3(rpc_url)
+
+    contract_list = [get_token_contract(token, web3) for token in token_list]
 
     while to_block < latest_block:
         print('Current Event Block vs Latest Event Block to Check: ', from_block, '/', latest_block, 'Blocks Remaining: ', latest_block - from_block)
@@ -244,7 +249,7 @@ def find_all_chain_transactions(rpc_url, token_list, latest_block, from_block, i
 
             transfer_events = get_transfer_events(contract, from_block, to_block)
             if len(transfer_events) > 0:
-                transfer_df = user_data(transfer_events)
+                transfer_df = user_data(transfer_events, web3)
                 make_user_data_csv(transfer_df)
             time.sleep(1)
         
@@ -266,14 +271,20 @@ def find_all_chain_transactions(rpc_url, token_list, latest_block, from_block, i
 # # updates our csv
 def find_all_transactions():
     
-    chain_index = 0
+    chain_index = 3
 
     while chain_index < 7:
         chain_info_list = get_chain_info(chain_index)
         rpc_url_list = chain_info_list[0]
         rpc_url = rpc_url_list[0]
+        token_list = get_token_list(chain_index)
+        to_block = get_lge_to_block(chain_index)
+        from_block = get_lge_from_block(chain_index)
+        interval = get_interval(chain_index)
 
-    find_all_chain_transactions(rpc_url)
+        find_chain_transactions(rpc_url, token_list, to_block, from_block, interval)
+
+        chain_index += 1
 
     # token_list = ["0xEA32A96608495e54156Ae48931A7c20f0dcc1a21", "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000", "0xbB06DCA3AE6887fAbF931640f67cab3e3a16F4dC", "0x420000000000000000000000000000000000000A"]
 
@@ -400,7 +411,7 @@ def get_chain_info(chain_index):
     return chain_info_list
 
 # # gets our to block
-def get_transaction_to_block(chain_index):
+def get_lge_to_block(chain_index):
     chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
 
     to_block_list = [58881393, 41035952, 85523772, 5221891, 76172561, 26984331, 16957713]
@@ -410,13 +421,36 @@ def get_transaction_to_block(chain_index):
     return to_block
 
 # # gets our from block
-def get_transaction_from_block(chain_index):
+def get_lge_from_block(chain_index):
     chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
     from_block_list = [57841624, 40486218, 81872542, 5110013, 71059329, 26569086, 16854057]
 
     from_block = from_block_list[chain_index]
 
     return from_block
+
+# # returns a nested list of our tokens
+def get_token_list(chain_index):
+    combined_token_list = []
+    
+    ftm_token_list = ['-1']
+    matic_token_list = ['-1']
+    op_token_list = ['-1']
+    metis_token_list = ["0xEA32A96608495e54156Ae48931A7c20f0dcc1a21", "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000", "0xbB06DCA3AE6887fAbF931640f67cab3e3a16F4dC", "0x420000000000000000000000000000000000000A"]
+    arb_token_list = ['-1']
+    bnb_token_list = ['-1']
+    eth_token_list = ['-1']
+
+    combined_token_list = [ftm_token_list, matic_token_list, op_token_list, metis_token_list, arb_token_list, bnb_token_list, eth_token_list]
+
+    return combined_token_list[chain_index]
+
+# # returns the interval we can use for a blockchain
+def get_interval(chain_index):
+    chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
+    interval_list = [5000, 5000, 5000, 20000, 2500, 5000, 5000]
+
+    return interval_list[chain_index]
 
 # # will loop through one RPC iteration
 def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
@@ -569,7 +603,7 @@ def find_claim_total(contract, wallet_address):
 
 # print(total_claim_amount)
 
-# find_all_transactions()
+find_all_transactions()
 
 # csv_name = 'all_events.csv'
 
@@ -577,7 +611,7 @@ def find_claim_total(contract, wallet_address):
 
 # format_df_timestamp(csv_name)
 
-make_vest_df()
+# make_vest_df()
 
 # contract_address = '0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e'
 
