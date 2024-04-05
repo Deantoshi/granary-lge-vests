@@ -508,6 +508,7 @@ def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
     # strictly to find out how much grain has already been found
     lge_df = pd.read_csv('grain_remaining_vests.csv')
     lge_df = lge_df.loc[lge_df['chain'] == chain]
+    print(lge_df)
     amount_of_found_grain = lge_df['remaining_vest'].sum()
 
     wallets_checked = 0
@@ -549,6 +550,7 @@ def get_web_3(rpc_url):
     
     return web3
 
+# # finds all the vests using a single rpc
 def find_single_rpc_vests(lge_csv, chain, ui_data_provider_contract_address, wait_time, total_grain_to_claim, rpc_url):
 
     print(ui_data_provider_contract_address)
@@ -571,11 +573,7 @@ def find_chains_vested_grain(chain_index, lge_csv):
     chain_symbol = get_chain_symbol(chain_index)
     grain_contract_address = get_grain_contract_address(chain_index)
     grain_sale_claim_contract_address = get_grain_claim_contract_address(chain_index)
-    ui_data_provider_contract_address = get_ui_data_provider_contract_address()
-    ui_data_provider_contract_address = 'Hello'
-    yeet = 'yeet'
-
-    print(yeet)
+    ui_data_provider_contract_address = get_ui_data_provider_contract_address(chain_index)
 
     rpc_url = rpc_url_list[0]
     web3 = get_web_3(rpc_url)
@@ -594,8 +592,7 @@ def find_chains_vested_grain(chain_index, lge_csv):
     while i < len(rpc_url_list):
         rpc_url = rpc_url_list[i]
 
-        print(ui_data_provider_contract_address)
-        grain_found += find_single_rpc_vests(lge_csv, chain_symbol, token_contract, ui_data_provider_contract_address, wait_time, total_grain_to_claim)
+        grain_found += find_single_rpc_vests(lge_csv, chain_symbol, ui_data_provider_contract_address, wait_time, total_grain_to_claim, rpc_url)
 
         if grain_found > total_grain_to_claim - 100:
             print(grain_found, ' / ', total_grain_to_claim, ' Grain Found. Grain Remaining:', total_grain_to_claim - grain_found)
@@ -656,7 +653,7 @@ def find_claim_total(contract, wallet_address):
 
 # format_df_timestamp(csv_name)
 
-make_vest_df()
+# make_vest_df()
 
 # contract_address = '0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e'
 
@@ -666,6 +663,6 @@ make_vest_df()
 
 # vest_df = pd.read_csv('grain_remaining_vests.csv')
 
-# vest_df = vest_df.loc[vest_df['chain'] == 'OP']
+# vest_df = vest_df.loc[vest_df['chain'] == 'FTM']
 
 # print(vest_df['remaining_vest'].sum())

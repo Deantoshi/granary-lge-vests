@@ -5,7 +5,12 @@ import time
 
 # # mmakes our web3 object and injects it's middleware
 def get_web_3(rpc_url):
-    web3 = Web3(Web3.HTTPProvider(rpc_url))
+
+    if 'wss' in rpc_url:
+        provider = Web3.WebsocketProvider(rpc_url)
+        web3 = Web3(provider)
+    else:
+        web3 = Web3(Web3.HTTPProvider(rpc_url))
     time.sleep(2.5)
     web3.middleware_onion.inject(geth_poa_middleware, layer=0)
     time.sleep(2.5)
@@ -14,8 +19,9 @@ def get_web_3(rpc_url):
 
 # # gets our chain's rpc list
 def get_rpc_list(chain_index):
-    ftm_rpc_list = ['https://rpcapi.fantom.network', 'https://rpc.ftm.tools', 'https://fantom-pokt.nodies.app', 'https://fantom.drpc.org', 'https://fantom.drpc.org']
-    matic_rpc_list = ['https://rpc-mainnet.matic.quiknode.pro']
+    # ftm_rpc_list = ['https://rpcapi.fantom.network', 'https://rpc.ftm.tools', 'https://fantom-pokt.nodies.app', 'https://fantom.drpc.org', 'https://fantom.drpc.org']
+    ftm_rpc_list = ['wss://fantom-rpc.publicnode.com']
+    matic_rpc_list = ['wss://polygon-bor-rpc.publicnode.com']
     optimism_rpc_list = ['https://optimism.gateway.tenderly.co']
     metis_rpc_list = ['https://andromeda.metis.io', 'https://metis-pokt.nodies.app']
     arbitrum_rpc_list = ['https://arb-mainnet-public.unifra.io']
@@ -208,11 +214,11 @@ def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
         if exists == False:
 
             remaining_vest_amount = find_vest_amount(ui_data_provider_contract, wallet_address, wait_time)
-
-            if remaining_vest_amount > 0:
-                wallet_vest_list.append(wallet_address)
-                remaining_vest_amount_list.append(remaining_vest_amount)
-                amount_of_found_grain += remaining_vest_amount
+            
+            # Used to make them have > 0 to get added to df, but removed incase manual triage is required
+            wallet_vest_list.append(wallet_address)
+            remaining_vest_amount_list.append(remaining_vest_amount)
+            amount_of_found_grain += remaining_vest_amount
 
         print(wallets_checked, ' / ', len(wallet_address_list), ' ', chain , ' Wallets Remaining: ', len(wallet_address_list) - wallets_checked, ' Grain Remaining to Find: ', grain_to_claim - amount_of_found_grain)
         wallets_checked += 1
@@ -264,7 +270,7 @@ def find_chains_vested_grain(chain_index, lge_csv):
     
     need_to_find_more_grain = True
 
-    wait_time = 1.5
+    wait_time = 1
     i = 0
 
     while i < len(rpc_url_list):
@@ -292,7 +298,7 @@ def make_vest_df():
 
     lge_csv = 'grain_lge_wallets.csv'
 
-    i = 3
+    i = 1
 
     # # iterates through each chain
     while i < len(chain_list):
