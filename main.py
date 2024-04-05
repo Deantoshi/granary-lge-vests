@@ -124,6 +124,13 @@ def get_transfer_events(contract, from_block, to_block):
     
     return events
 
+# # takes in a contract object and returns all associated approval events
+def get_approval_events(contract, from_block, to_block):
+    
+    events = contract.events.Approval.get_logs(fromBlock=from_block, toBlock=to_block)
+    
+    return events
+
 #returns a df if a tx_hash exists
 def chain_exists(df, chain):
 
@@ -187,26 +194,24 @@ def user_data(events, web3):
         print('Batch of Events Processed: ', i, '/', len(events))
         i+=1
 
-        to_address = event['args']['to']
+        # to_address = event['args']['to']
+        to_address = event['args']['spender']
 
 
         if to_address == '0x9DD07fF57C0e9cA6D2009911bEE273106fe0DAf7':
             counter += 2
 
         if counter == 2:
-            time.sleep(0.1)
 
             tx_hash = event['transactionHash'].hex()
             tx_hash_list.append(tx_hash)
-            from_address = event['args']['from']
+            # from_address = event['args']['from']
+            from_address = event['args']['owner']
             from_list.append(from_address)
             to_list.append(to_address)
 
             block = web3.eth.get_block(event['blockNumber'])
             block_number = int(block['number'])
-
-            if int(block_number) == 5190033:
-                print(event)
             block_list.append(block_number)
 
             timestamp_list.append(block['timestamp'])
@@ -217,10 +222,13 @@ def user_data(events, web3):
 
             token_symbol = get_token_symbol(token_id)
             token_symbol_list.append(token_symbol)
-            token_volume = event['args']['value']
+            # token_volume = event['args']['value']
+            token_volume = -1
 
             token_amount = get_clean_token_amount(token_id, token_volume)
             token_amount_list.append(token_amount)
+        
+        # time.sleep(0.1)
 
     df['tx_hash'] = tx_hash_list
     df['from_address'] = from_list
@@ -238,6 +246,9 @@ def find_chain_transactions(rpc_url, token_list, latest_block, from_block, inter
 
     to_block = from_block + interval
 
+    # from_block = 5190030
+    # to_block = 5190035
+
     web3 = get_web_3(rpc_url)
 
     contract_list = [get_token_contract(token, web3) for token in token_list]
@@ -247,7 +258,8 @@ def find_chain_transactions(rpc_url, token_list, latest_block, from_block, inter
 
         for contract in contract_list:
 
-            transfer_events = get_transfer_events(contract, from_block, to_block)
+            # transfer_events = get_transfer_events(contract, from_block, to_block)
+            transfer_events = get_approval_events(contract, from_block, to_block)
             if len(transfer_events) > 0:
                 transfer_df = user_data(transfer_events, web3)
                 make_user_data_csv(transfer_df)
@@ -273,7 +285,7 @@ def find_all_transactions():
     
     chain_index = 3
 
-    while chain_index < 7:
+    while chain_index < 4:
         chain_info_list = get_chain_info(chain_index)
         rpc_url_list = chain_info_list[0]
         rpc_url = rpc_url_list[0]
@@ -452,6 +464,12 @@ def get_interval(chain_index):
 
     return interval_list[chain_index]
 
+# # gets as the ui_data_provider_contract_address
+def get_ui_data_provider_contract_address():
+    ui_data_provider_contract_address = '0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e'
+
+    return ui_data_provider_contract_address
+
 # # will loop through one RPC iteration
 def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
 
@@ -504,20 +522,18 @@ def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
 def get_web_3(rpc_url):
     web3 = Web3(Web3.HTTPProvider(rpc_url))
     time.sleep(2.5)
-    print('Web3: ', web3)
     web3.middleware_onion.inject(geth_poa_middleware, layer=0)
     time.sleep(2.5)
     
     return web3
 
-def find_single_rpc_vests(lge_csv, chain, token_contract, ui_data_provider_contract_address, wait_time, total_grain_to_claim):
+def find_single_rpc_vests(lge_csv, chain, ui_data_provider_contract_address, wait_time, total_grain_to_claim, rpc_url):
 
+    print(ui_data_provider_contract_address)
     lge_df = pd.read_csv(lge_csv)
     df = lge_df.loc[lge_df['chain'] == chain]
     
     web3 = get_web_3(rpc_url)
-
-    token_contract = get_token_contract(token_contract, web3)
 
     ui_data_provider_contract = get_ui_data_provider_contract(ui_data_provider_contract_address, web3)
 
@@ -533,11 +549,20 @@ def find_chains_vested_grain(chain_index, lge_csv):
 
     rpc_url_list = chain_info_list[0]
     chain_symbol = chain_info_list[1]
-    token_contract = chain_info_list[2]
+    grain_contract_address = chain_info_list[2]
     grain_sale_claim_contract_address = chain_info_list[3]
-    ui_data_provider_contract_address = chain_info_list[4]
+    ui_data_provider_contract_address = '0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e'
+    ui_data_provider_contract_address = 'Hello'
 
-    total_grain_to_claim = -1
+    print(ui_data_provider_contract_address)
+
+    rpc_url = rpc_url_list[0]
+    web3 = get_web_3(rpc_url)
+    token_contract = get_token_contract(grain_contract_address, web3)
+
+    total_grain_to_claim = find_claim_total(token_contract, grain_sale_claim_contract_address)
+
+    # total_grain_to_claim = -1
     grain_found = 0
     
     need_to_find_more_grain = True
@@ -546,10 +571,9 @@ def find_chains_vested_grain(chain_index, lge_csv):
     i = 0
 
     while i < len(rpc_url_list):
+        rpc_url = rpc_url_list[i]
 
-        
-        total_grain_to_claim = find_claim_total(token_contract, grain_sale_claim_contract_address)
-
+        print(ui_data_provider_contract_address)
         grain_found += find_single_rpc_vests(lge_csv, chain_symbol, token_contract, ui_data_provider_contract_address, wait_time, total_grain_to_claim)
 
         if grain_found > total_grain_to_claim - 100:
@@ -575,7 +599,7 @@ def make_vest_df():
 
     lge_csv = 'grain_lge_wallets.csv'
 
-    i = 0
+    i = 3
 
     # # iterates through each chain
     while i < len(chain_list):
@@ -603,7 +627,7 @@ def find_claim_total(contract, wallet_address):
 
 # print(total_claim_amount)
 
-find_all_transactions()
+# find_all_transactions()
 
 # csv_name = 'all_events.csv'
 
@@ -611,7 +635,7 @@ find_all_transactions()
 
 # format_df_timestamp(csv_name)
 
-# make_vest_df()
+make_vest_df()
 
 # contract_address = '0x9f123572F1488C9Ab8b39baca8285BDeABdeDb7e'
 
