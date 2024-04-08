@@ -3,6 +3,8 @@ from web3.middleware import geth_poa_middleware
 import pandas as pd
 import time
 
+CHAIN_INDEX = 0
+
 # # mmakes our web3 object and injects it's middleware
 def get_web_3(rpc_url):
 
@@ -22,11 +24,12 @@ def get_rpc_list(chain_index):
     # ftm_rpc_list = ['https://rpcapi.fantom.network', 'https://rpc.ftm.tools', 'https://fantom-pokt.nodies.app', 'https://fantom.drpc.org', 'https://fantom.drpc.org']
     ftm_rpc_list = ['wss://fantom-rpc.publicnode.com']
     matic_rpc_list = ['wss://polygon-bor-rpc.publicnode.com']
-    optimism_rpc_list = ['https://optimism.gateway.tenderly.co']
-    metis_rpc_list = ['https://andromeda.metis.io', 'https://metis-pokt.nodies.app']
-    arbitrum_rpc_list = ['https://arb-mainnet-public.unifra.io']
-    bsc_rpc_list = ['https://public.stackup.sh/api/v1/node/bsc-mainnet']
-    eth_rpc_list = ['https://eth-pokt.nodies.app']
+    optimism_rpc_list = ['wss://optimism-rpc.publicnode.com']
+    metis_rpc_list = ['https://andromeda.metis.io']
+    arbitrum_rpc_list = ['wss://arbitrum-one-rpc.publicnode.com']
+    bsc_rpc_list = ['wss://bsc-rpc.publicnode.com']
+    # eth_rpc_list = ['https://eth-pokt.nodies.app']
+    eth_rpc_list = ['wss://ethereum-rpc.publicnode.com']
 
     rpc_combined_list = [ftm_rpc_list, matic_rpc_list, optimism_rpc_list, metis_rpc_list, arbitrum_rpc_list, bsc_rpc_list, eth_rpc_list]
 
@@ -222,6 +225,15 @@ def get_user_grain_to_claim(user_data):
 
     return grain_left_to_claim
 
+# # gets a users total_weight
+def get_user_total_weight(contract, wallet_address, wait_time):
+    user_total_weight = contract.functions.getUserTotalWeight(wallet_address).call()
+
+    time.sleep(wait_time)
+
+    return user_total_weight
+
+    
 
 #makes a dataframe and stores it in a csv file
 def make_lge_data_csv(df):
@@ -246,11 +258,13 @@ def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
     chain = df['chain'].iloc[0]
 
     wallet_vest_list = []
+    remaining_vest_list = []
     term_list = []
     grain_owed_list = []
     pending_grain_list = []
     grain_claimed_list = []
     grain_to_claim_list = []
+    user_weight_list = []
     chain_list = []
 
     chain_df = pd.DataFrame()
@@ -259,7 +273,7 @@ def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
     lge_df = pd.read_csv('grain_user_data.csv')
     lge_df = lge_df.loc[lge_df['chain'] == chain]
 
-    amount_of_found_grain = lge_df['grain_owed'].sum()
+    amount_of_found_grain = lge_df['remaining_vest'].sum()
 
     wallets_checked = 0
 
@@ -286,13 +300,20 @@ def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
 
             user_grain_to_claim = get_user_grain_to_claim(user_data)
 
-            amount_of_found_grain += user_grain_owed
+            user_total_weight = get_user_total_weight(ui_data_provider_contract, wallet_address, wait_time)
+
+            remaining_vest = user_grain_owed - user_grain_to_claim
+
+            remaining_vest_list.append(remaining_vest)
+
+            amount_of_found_grain += remaining_vest
 
             term_list.append(user_terms_length)
             grain_owed_list.append(user_grain_owed)
             pending_grain_list.append(user_pending_grain)
             grain_claimed_list.append(total_user_grain_claimed)
             grain_to_claim_list.append(user_grain_to_claim)
+            user_weight_list.append(user_total_weight)
             chain_list.append(chain)
 
 
@@ -303,16 +324,18 @@ def loop_through_rpc(df, ui_data_provider_contract, wait_time, grain_to_claim):
     print('RPC Complete')
 
     chain_df['wallet_address'] = wallet_vest_list
+    chain_df['remaining_vest'] = remaining_vest_list
     chain_df['term'] = term_list
     chain_df['grain_owed'] = grain_owed_list
     chain_df['pending_grain'] = pending_grain_list
     chain_df['grain_claimed'] = grain_claimed_list
     chain_df['grain_to_claim'] = grain_to_claim_list
+    chain_df['weight'] = user_weight_list
     chain_df['chain'] = chain_list
 
     make_lge_data_csv(chain_df)
 
-    grain_found = chain_df['grain_owed'].sum()
+    grain_found = chain_df['remaining_vest'].sum()
     
     
     return grain_found
@@ -372,22 +395,21 @@ def find_chains_vested_grain(chain_index, lge_csv):
     return
 
 # # will loop through each chain to look for wallet vest amounts
-def make_vest_df():
+def make_vest_df(chain_index):
 
     chain_list = ['FTM', 'MATIC', 'OP', 'METIS', 'ARB', 'BNB', 'ETH']
 
+    chain_index_list = [0, 1, 2, 3, 4, 5, 6]
+
     lge_csv = 'grain_lge_wallets.csv'
 
-    i = 1
-
     # # iterates through each chain
-    while i < len(chain_list):
+    for chain_index in chain_index_list:
 
-        find_chains_vested_grain(i, lge_csv)
-
-    
-        i += 1
+        find_chains_vested_grain(chain_index, lge_csv)
 
     return
 
-make_vest_df()
+chain_index = 4
+
+make_vest_df(chain_index)
