@@ -18,6 +18,8 @@ Now you can see the grain_user_data.csv file. That's it.
 ### Additional Files
 ```
 grain_lge_wallets.csv contains a list of users that participated in any of the GRAIN LGEs and their respective chains.
+
 oath_ftm_lge_buyers.csv contains a list of users that participated in the OATH FTM LGE.
+
 find_oath_ftm_lge_terms.py finds all OATH FTM LGE participant shares.
 ```
