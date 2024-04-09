@@ -75,9 +75,6 @@ def make_user_terms_csv(df):
 # # finds a users terms for a single wallet_address
 def find_single_users_terms(wallet_address, contract):
 
-    print(wallet_address)
-    print(contract)
-
     terms = find_user_terms(contract, wallet_address)
 
     user_shares = get_user_shares(terms)
@@ -136,3 +133,9 @@ def find_all_user_terms():
     return
 
 find_all_user_terms()
+
+df = pd.read_csv('user_terms.csv')
+
+total_shares = df['buyer_shares'].sum()
+
+print(total_shares)
