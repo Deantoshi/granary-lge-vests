@@ -21,8 +21,9 @@ def get_web_3(rpc_url):
 
 # # gets our chain's rpc list
 def get_rpc_list(chain_index):
-    # ftm_rpc_list = ['https://rpcapi.fantom.network', 'https://rpc.ftm.tools', 'https://fantom-pokt.nodies.app', 'https://fantom.drpc.org', 'https://fantom.drpc.org']
-    ftm_rpc_list = ['wss://fantom-rpc.publicnode.com']
+    # ftm_rpc_list = ['https://rpcapi.fantom.network', 'https://rpc.ftm.tools', 'https://fantom-pokt.nodies.app', 'https://fantom.drpc.org', 'https://fantom.drpc.org', 'https://twilight-green-season.fantom.quiknode.pro']
+    # ftm_rpc_list = ['wss://fantom-rpc.publicnode.com']
+    ftm_rpc_list = ['https://rpc.ftm.tools']
     matic_rpc_list = ['wss://polygon-bor-rpc.publicnode.com']
     optimism_rpc_list = ['wss://optimism-rpc.publicnode.com']
     metis_rpc_list = ['https://andromeda.metis.io']
@@ -362,7 +363,7 @@ def find_chains_vested_grain(chain_index, lge_csv):
     grain_sale_claim_contract_address = get_grain_claim_contract_address(chain_index)
     ui_data_provider_contract_address = get_ui_data_provider_contract_address(chain_index)
 
-    wait_time = 1
+    wait_time = 0.5
 
     rpc_counter = 0
 
@@ -387,10 +388,10 @@ def find_chains_vested_grain(chain_index, lge_csv):
             time.sleep(2)
             need_to_find_more_grain = False
 
-        if need_to_find_more_grain == True:
-            i += 1
-        else:
-            break
+        # if need_to_find_more_grain == True:
+        #     i += 1
+        # else:
+        #     break
     
     return
 
@@ -410,6 +411,16 @@ def make_vest_df(chain_index):
 
     return
 
-chain_index = 4
+## good here **
+# chain_index = 4
 
-make_vest_df(chain_index)
+# make_vest_df(chain_index)
+
+df = pd.read_csv('vest_sheet.csv')
+
+df['total_cdx_per_wallet'] = df.groupby('wallet_address')['cdx_allocation'].transform('sum')
+
+df = df[['wallet_address', 'chain', 'cdx_allocation', 'total_cdx_per_wallet']]
+print(df)
+
+df.to_csv('test_test.csv', index=False)

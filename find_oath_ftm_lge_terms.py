@@ -134,8 +134,8 @@ def find_all_user_terms():
 
 find_all_user_terms()
 
-df = pd.read_csv('user_terms.csv')
+# df = pd.read_csv('user_terms.csv')
 
-total_shares = df['buyer_shares'].sum()
+# total_shares = df['buyer_shares'].sum()
 
-print(total_shares)
+# print(total_shares)
