@@ -27,9 +27,9 @@ def get_rpc_list(chain_index):
     # ftm_rpc_list = ['wss://fantom-rpc.publicnode.com']
     ftm_rpc_list = ['https://rpc.ftm.tools']
     matic_rpc_list = ['https://polygon.llamarpc.com']
-    optimism_rpc_list = ['wss://optimism-rpc.publicnode.com']
+    optimism_rpc_list = ['https://rpc.ankr.com/optimism']
     metis_rpc_list = ['https://andromeda.metis.io'] # # **
-    arbitrum_rpc_list = ['wss://arbitrum-one-rpc.publicnode.com']
+    arbitrum_rpc_list = ['https://arbitrum.llamarpc.com']
     bsc_rpc_list = ['https://binance.llamarpc.com']
     # eth_rpc_list = ['https://eth-pokt.nodies.app']
     eth_rpc_list = ['https://eth.llamarpc.com']
@@ -215,7 +215,7 @@ def run_all(chain_index):
                     df = get_get_user_shares(contract, wallet_address)
 
                 print(df)
-                
+
                 time.sleep(WAIT_TIME)
 
 
@@ -230,6 +230,23 @@ def run_all(chain_index):
 
     return df
 
-chain_index = 6
-df = run_all(chain_index)
-df.to_csv('grain_claim_test.csv',index=False)
+# chain_index = 5
+# df = run_all(chain_index)
+# df.to_csv('grain_claim_test.csv',index=False)
+
+df = pd.read_csv('dune_wallet_addresses.csv')
+df = df.drop_duplicates(subset=['wallet_address'])
+df.to_csv('dune_wallet_addresses.csv', index=False)
+
+# df_1 = pd.read_csv('gct_1.csv')
+# df_2 = pd.read_csv('gct_2.csv')
+# # df_3 = pd.read_csv('gct_3.csv')
+# # df_4 = pd.read_csv('gct_4.csv')
+
+# df = pd.concat([df_1, df_2])
+# df = df.drop_duplicates(subset=['wallet_address', 'user_total_weight', 'number_of_releases', 'total_claimed', 'chain'])
+# # df = df.drop_duplicates(subset=['wallet_address'])
+# print(df)
+# print(df['user_total_weight'].sum())
+
+# df.to_csv('test_test.csv', index=False)
